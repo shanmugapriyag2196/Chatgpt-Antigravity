@@ -1,6 +1,6 @@
 "use client";
 
-import { useChat } from "ai/react";
+import { useChat, type Message } from "ai/react";
 import { useState, useRef, useEffect } from "react";
 import { Send, Paperclip, X, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -76,7 +76,7 @@ export default function ChatInterface() {
                         <p className="text-xl font-medium text-foreground">How can I help you today?</p>
                     </div>
                 ) : (
-                    messages.map((m: any) => (
+                    messages.map((m: Message) => (
                         <div
                             key={m.id}
                             className={cn(

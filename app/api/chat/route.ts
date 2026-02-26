@@ -13,7 +13,7 @@ export async function POST(req: Request) {
             messages,
         });
 
-        return result.toTextStreamResponse();
+        return result.toDataStreamResponse();
     } catch (error) {
         return new Response(JSON.stringify({ error: "Failed to fetch response" }), {
             status: 500,

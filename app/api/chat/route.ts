@@ -14,9 +14,13 @@ export async function POST(req: Request) {
             messages,
         });
 
-        return result.toDataStreamResponse();
-    } catch (error) {
-        return new Response(JSON.stringify({ error: "Failed to fetch response" }), {
+        return result.toTextStreamResponse();
+    } catch (error: any) {
+        console.error("Chat API Error:", error);
+        return new Response(JSON.stringify({
+            error: "Failed to fetch response",
+            details: error.message
+        }), {
             status: 500,
             headers: { "Content-Type": "application/json" },
         });

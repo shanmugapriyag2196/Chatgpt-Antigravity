@@ -6,7 +6,11 @@ import { Send, Paperclip, X, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function ChatInterface() {
-    const { messages, input, setInput, handleInputChange, handleSubmit, append } = useChat();
+    const { messages, input, setInput, handleInputChange, handleSubmit, append, isLoading, error } = useChat({
+        onError: (err: Error) => {
+            console.error("Chat Error:", err);
+        }
+    });
     const [files, setFiles] = useState<File[]>([]);
     const [isUploading, setIsUploading] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
@@ -109,6 +113,11 @@ export default function ChatInterface() {
                             </div>
                         </div>
                     ))
+                )}
+                {error && (
+                    <div className="max-w-3xl mx-auto p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm">
+                        An error occurred: {error.message}. Please check if your OpenAI API key is correctly set up in Vercel.
+                    </div>
                 )}
             </div>
 

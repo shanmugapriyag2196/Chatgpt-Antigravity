@@ -6,8 +6,9 @@ import { Send, Paperclip, X, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function ChatInterface() {
-    const { messages, input, handleInputChange, handleSubmit, setMessages } = useChat();
+    const { messages, input, setInput, handleInputChange, handleSubmit, append } = useChat();
     const [files, setFiles] = useState<File[]>([]);
+    const [isUploading, setIsUploading] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -29,30 +30,35 @@ export default function ChatInterface() {
 
     const handleSubmitWithFiles = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
+        if (!input.trim() && files.length === 0) return;
 
-        let currentInput = input;
+        let finalInput = input;
 
         if (files.length > 0) {
-            const uploadedFiles = await Promise.all(
-                files.map(async (file) => {
-                    const response = await fetch(`/api/upload?filename=${file.name}`, {
-                        method: 'POST',
-                        body: file,
-                    });
-                    const blob = await response.json();
-                    return blob.url;
-                })
-            );
+            setIsUploading(true);
+            try {
+                const uploadedFiles = await Promise.all(
+                    files.map(async (file) => {
+                        const response = await fetch(`/api/upload?filename=${file.name}`, {
+                            method: 'POST',
+                            body: file,
+                        });
+                        const blob = await response.json();
+                        return blob.url;
+                    })
+                );
 
-            const fileLinks = uploadedFiles.map(url => `[File Attachment](${url})`).join('\n');
-            currentInput = `${input}\n\nAttachments:\n${fileLinks}`;
+                const fileLinks = uploadedFiles.map(url => `[File Attachment](${url})`).join('\n');
+                finalInput = `${input}\n\nAttachments:\n${fileLinks}`;
+            } catch (error) {
+                console.error("Upload failed:", error);
+            } finally {
+                setIsUploading(false);
+            }
         }
 
-        handleSubmit(e, {
-            body: {
-                messages: [...messages, { role: 'user', content: currentInput }]
-            }
-        });
+        append({ role: 'user', content: finalInput });
+        setInput("");
         setFiles([]);
     };
 
@@ -159,10 +165,10 @@ export default function ChatInterface() {
                         />
                         <button
                             type="submit"
-                            disabled={!input.trim() && files.length === 0}
+                            disabled={(!input.trim() && files.length === 0) || isUploading}
                             className="p-3 bg-foreground text-background rounded-xl disabled:opacity-30 disabled:hover:bg-foreground hover:bg-[#d1d1d1] transition-all"
                         >
-                            <Send className="w-5 h-5" />
+                            <Send className={cn("w-5 h-5", isUploading && "animate-pulse")} />
                         </button>
                     </form>
                     <div className="text-[10px] text-center text-[#b4b4b4] pb-2">

@@ -1,8 +1,8 @@
 import { openai } from "@ai-sdk/openai";
 import { streamText } from "ai";
 
-// IMPORTANT! Set the runtime to edge
-export const runtime = "edge";
+// Using Node.js runtime for build stability
+export const runtime = "nodejs";
 
 export async function POST(req: Request) {
     try {
@@ -10,6 +10,7 @@ export async function POST(req: Request) {
 
         const result = streamText({
             model: openai("gpt-4o-mini"),
+            system: "You are a helpful AI assistant. Provide detailed and accurate information, especially regarding technology integrations like Power Apps, AI, and Microsoft 365.",
             messages,
         });
 

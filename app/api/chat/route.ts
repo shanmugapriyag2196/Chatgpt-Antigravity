@@ -14,15 +14,19 @@ export async function POST(req: Request) {
             messages,
         });
 
-        return result.toTextStreamResponse();
+        return result.toDataStreamResponse();
     } catch (error: any) {
-        console.error("Chat API Error:", error);
-        return new Response(JSON.stringify({
-            error: "Failed to fetch response",
-            details: error.message
-        }), {
-            status: 500,
-            headers: { "Content-Type": "application/json" },
-        });
+        console.error("DEBUG - Chat API Error:", error);
+        return new Response(
+            JSON.stringify({
+                error: "OpenAI API Error",
+                message: error.message || "An unexpected error occurred on the server.",
+                details: error
+            }),
+            {
+                status: 500,
+                headers: { "Content-Type": "application/json" }
+            }
+        );
     }
 }

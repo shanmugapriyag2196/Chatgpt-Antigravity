@@ -115,8 +115,10 @@ export default function ChatInterface() {
                     ))
                 )}
                 {error && (
-                    <div className="max-w-3xl mx-auto p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm">
-                        An error occurred: {error.message}. Please check if your OpenAI API key is correctly set up in Vercel.
+                    <div className="max-w-3xl mx-auto p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm space-y-2">
+                        <p className="font-semibold">Error detected:</p>
+                        <p>{error.message || "The server returned an empty error. This often means the API key is invalid or your Vercel environment variables haven't updated yet."}</p>
+                        <p className="text-xs opacity-50">Tip: Ensure your OPENAI_API_KEY on Vercel ends with the same characters as your local one. If it's shorter, it might be truncated.</p>
                     </div>
                 )}
             </div>

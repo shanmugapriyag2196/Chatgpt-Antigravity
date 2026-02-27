@@ -122,8 +122,17 @@ export default function ChatInterface() {
                         <div className="bg-black/40 p-3 rounded-lg border border-red-500/10 font-mono text-xs overflow-x-auto">
                             <p className="font-semibold text-red-500 mb-1">Server Message:</p>
                             <p>{error.message || "No message"}</p>
-                            <p className="font-semibold text-yellow-500 mt-2 mb-1">Raw Error (Debug):</p>
-                            <pre className="whitespace-pre-wrap">{JSON.stringify(error, null, 2)}</pre>
+                            <p className="font-semibold text-yellow-500 mt-2 mb-1">Technical Details (Debug):</p>
+                            <pre className="whitespace-pre-wrap">
+                                {JSON.stringify({
+                                    name: error.name,
+                                    message: error.message,
+                                    // @ts-ignore
+                                    status: error.status,
+                                    // @ts-ignore
+                                    data: error.data
+                                }, null, 2)}
+                            </pre>
                         </div>
 
                         <p className="font-semibold">Important:</p>

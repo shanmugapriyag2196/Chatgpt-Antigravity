@@ -8,15 +8,17 @@ export async function POST(req: Request) {
     try {
         const { messages } = await req.json();
 
-        // Runtime diagnostics (Safe - does not leak keys)
         const key = process.env.OPENAI_API_KEY;
-        console.log("DEBUG - Runtime Diagnostics:");
-        console.log("- OPENAI_API_KEY present:", !!key);
-        if (key) {
-            console.log("- OPENAI_API_KEY length:", key.length);
-            console.log("- OPENAI_API_KEY starts with:", key.substring(0, 7));
-            console.log("- OPENAI_API_KEY ends with:", key.substring(key.length - 4));
+
+        // Explicitly check for suspicious keys before calling OpenAI
+        if (!key) {
+            throw new Error("OPENAI_API_KEY is completely missing from environment variables.");
         }
+        if (key.length < 150) {
+            throw new Error(`OPENAI_API_KEY looks truncated. Expected ~164 chars, but found ${key.length}. Please check Vercel settings.`);
+        }
+
+        console.log("DEBUG - Key Check Passed. Length:", key.length);
 
         const result = streamText({
             model: openai("gpt-4o-mini"),
@@ -24,14 +26,15 @@ export async function POST(req: Request) {
             messages,
         });
 
-        return result.toTextStreamResponse();
+        return result.toDataStreamResponse();
     } catch (error: any) {
         console.error("DEBUG - Chat API Error:", error);
+
+        // Return a standard error response that useChat can parse
         return new Response(
             JSON.stringify({
-                error: "OpenAI API Error",
-                message: error.message || "An unexpected error occurred on the server.",
-                details: error
+                message: error.message || "Unknown Server Error",
+                status: 500
             }),
             {
                 status: 500,

@@ -119,24 +119,41 @@ export default function ChatInterface() {
                         <div className="flex items-center gap-2">
                             <span className="font-bold text-lg">⚠️ CRITICAL: API KEY ISSUE DETECTED</span>
                         </div>
-                        <p className="font-medium underline">The API key you mentioned (sk-proj...Keori2kA) is missing about 60 characters from the middle.</p>
-                        <p>It looks like when you copied the key to Vercel, it was truncated (cut off). Your actual key in the local file is much longer.</p>
+                        <p className="font-medium underline text-balance">The API key format might still be incorrect or environment variables haven't refreshed.</p>
+                        <p>If you see skip-proj... (shortened) here but your local one is 160+ chars, it is definitely truncated.</p>
                         <div className="bg-black/40 p-3 rounded-lg border border-red-500/10 font-mono text-xs overflow-x-auto">
-                            <p className="mb-1 text-[#b4b4b4]">Compare these:</p>
-                            <p className="text-red-400">Vercel: sk-proj-2tYbu5...VrtEVJJDf2ynxpXbgV...Keori2kA (CORRUPT)</p>
-                            <p className="text-green-400">Local: sk-proj-2tYbu5...VrtEVJJDf2yGlChklGnz...Keori2kA (CORRECT)</p>
+                            <p className="mb-1 text-[#b4b4b4]">Key Comparison Status:</p>
+                            <p className="text-red-400">Error: {error.message || "Unknown error (check Vercel Logs)"}</p>
                         </div>
                         <p className="font-semibold">How to fix:</p>
                         <ul className="list-disc ml-5 space-y-1">
                             <li>Go to Vercel → Project Settings → Environment Variables.</li>
                             <li>Delete the existing <b>OPENAI_API_KEY</b>.</li>
-                            <li>Open your local <b>.env.local</b> file here.</li>
-                            <li>Copy the <b>ENTIRE</b> value for <b>OPENAI_API_KEY</b> (make sure you get all 160+ characters).</li>
-                            <li>Paste it into Vercel and Save.</li>
-                            <li><b>Redeploy</b> the latest build.</li>
+                            <li>Copy the <b>FULL</b> key from your local <b>.env.local</b>.</li>
+                            <li>Paste into Vercel and Save.</li>
+                            <li>Go to <b>Deployments</b> and click <b>Redeploy</b> on the latest build.</li>
                         </ul>
                     </div>
                 )}
+                {isLoading && (
+                    <div className="flex gap-4 max-w-3xl mx-auto items-start group animation-pulse">
+                        <div className="w-8 h-8 rounded-full bg-[#10a37f] flex items-center justify-center text-white shrink-0">
+                            <span className="text-xs">AI</span>
+                        </div>
+                        <div className="p-4 rounded-2xl bg-transparent text-[#ececec]">
+                            <div className="flex gap-1 items-center h-6">
+                                <div className="w-1.5 h-1.5 bg-[#b4b4b4] rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                                <div className="w-1.5 h-1.5 bg-[#b4b4b4] rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                                <div className="w-1.5 h-1.5 bg-[#b4b4b4] rounded-full animate-bounce"></div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+                <div className="text-center py-4 opacity-20 hover:opacity-100 transition-opacity">
+                    <span className="text-[10px] text-[#b4b4b4] uppercase tracking-widest bg-[#1a1a1a] px-2 py-1 rounded">
+                        Build: Feb 27, 2026 - 5:00 PM
+                    </span>
+                </div>
             </div>
 
             {/* Input Area */}
@@ -195,7 +212,7 @@ export default function ChatInterface() {
                             disabled={(!input.trim() && files.length === 0) || isUploading}
                             className="p-3 bg-foreground text-background rounded-xl disabled:opacity-30 disabled:hover:bg-foreground hover:bg-[#d1d1d1] transition-all"
                         >
-                            <Send className={cn("w-5 h-5", isUploading && "animate-pulse")} />
+                            <Send className={cn("w-5 h-5", (isUploading || isLoading) && "animate-pulse")} />
                         </button>
                     </form>
                     <div className="text-[10px] text-center text-[#b4b4b4] pb-2">

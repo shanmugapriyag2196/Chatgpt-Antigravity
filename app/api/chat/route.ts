@@ -26,15 +26,18 @@ export async function POST(req: Request) {
             messages,
         });
 
-        return result.toDataStreamResponse();
+        return result.toTextStreamResponse();
     } catch (error: any) {
         console.error("DEBUG - Chat API Error:", error);
 
-        // Return a standard error response that useChat can parse
         return new Response(
             JSON.stringify({
                 message: error.message || "Unknown Server Error",
-                status: 500
+                status: 500,
+                debug: {
+                    name: error.name,
+                    stack: error.stack?.substring(0, 100)
+                }
             }),
             {
                 status: 500,

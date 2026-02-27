@@ -121,16 +121,21 @@ export default function ChatInterface() {
                         </div>
                         <div className="bg-black/40 p-3 rounded-lg border border-red-500/10 font-mono text-xs overflow-x-auto">
                             <p className="font-semibold text-red-500 mb-1">Server Message:</p>
-                            <p>{error.message || "The server failed to provide a specific error message."}</p>
+                            <p>{error.message || "No message"}</p>
+                            <p className="font-semibold text-yellow-500 mt-2 mb-1">Raw Error (Debug):</p>
+                            <pre className="whitespace-pre-wrap">{JSON.stringify(error, null, 2)}</pre>
                         </div>
 
-                        <p className="font-semibold">Troubleshooting Steps:</p>
+                        <p className="font-semibold">Important:</p>
+                        <div className="bg-yellow-500/10 border border-yellow-500/20 p-3 rounded-lg text-yellow-400">
+                            <p className="font-bold mb-1">Did you click "Redeploy"?</p>
+                            <p>Changing Environment Variables does <b>not</b> update your live site. You must go to the <b>Deployments</b> tab in Vercel and click <b>Redeploy</b> on the latest item.</p>
+                        </div>
                         <ol className="list-decimal ml-5 space-y-2">
                             <li>
                                 <b>Check Key Length:</b> Your key in <code>.env.local</code> is <b>164 characters</b>. If the error message above mentions a smaller number (like 80 or 100), your Vercel key is truncated.
                             </li>
                             <li>
-                                <b>Redeploy AFTER Saving:</b> Vercel does <u>not</u> apply secret changes to existing builds. You <b>MUST</b> go to the "Deployments" tab and click <b>Redeploy</b> on the latest one.
                             </li>
                             <li>
                                 <b>Verify Browser Console:</b> Press F12, go to "Console", and check for any red errors. They often contain the full details.

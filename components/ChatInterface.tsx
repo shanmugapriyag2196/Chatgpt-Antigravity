@@ -7,8 +7,10 @@ import { cn } from "@/lib/utils";
 
 export default function ChatInterface() {
     const { messages, input, setInput, handleInputChange, handleSubmit, append, isLoading, error } = useChat({
-        onError: (err: Error) => {
-            console.error("Chat Error:", err);
+        onError: (err: any) => {
+            console.error("CRITICAL Chat Error Trace:", err);
+            // @ts-ignore
+            window.LAST_ERROR = err;
         }
     });
     const [files, setFiles] = useState<File[]>([]);
@@ -120,36 +122,17 @@ export default function ChatInterface() {
                             <span className="font-bold text-lg">⚠️ CRITICAL ERROR DETECTED</span>
                         </div>
                         <div className="bg-black/40 p-3 rounded-lg border border-red-500/10 font-mono text-xs overflow-x-auto">
-                            <p className="font-semibold text-red-500 mb-1">Server Message:</p>
-                            <p>{error.message || "No message"}</p>
-                            <p className="font-semibold text-yellow-500 mt-2 mb-1">Technical Details (Debug):</p>
-                            <pre className="whitespace-pre-wrap">
-                                {JSON.stringify({
-                                    name: error.name,
-                                    message: error.message,
-                                    // @ts-ignore
-                                    status: error.status,
-                                    // @ts-ignore
-                                    data: error.data
-                                }, null, 2)}
-                            </pre>
+                            <p className="font-semibold text-red-500 mb-1">Error Information:</p>
+                            <p>Name: {error.name || "No name"}</p>
+                            <p>Message: {error.message || "No message"}</p>
+                            <p className="font-semibold text-yellow-500 mt-2 mb-1">Developer Instructions (F12):</p>
+                            <p>1. Open Browser Console</p>
+                            <p>2. Type <code>window.LAST_ERROR</code></p>
+                            <p>3. Copy the full output here</p>
                         </div>
 
-                        <p className="font-semibold">Important:</p>
-                        <div className="bg-yellow-500/10 border border-yellow-500/20 p-3 rounded-lg text-yellow-400">
-                            <p className="font-bold mb-1">Did you click "Redeploy"?</p>
-                            <p>Changing Environment Variables does <b>not</b> update your live site. You must go to the <b>Deployments</b> tab in Vercel and click <b>Redeploy</b> on the latest item.</p>
-                        </div>
-                        <ol className="list-decimal ml-5 space-y-2">
-                            <li>
-                                <b>Check Key Length:</b> Your key in <code>.env.local</code> is <b>164 characters</b>. If the error message above mentions a smaller number (like 80 or 100), your Vercel key is truncated.
-                            </li>
-                            <li>
-                            </li>
-                            <li>
-                                <b>Verify Browser Console:</b> Press F12, go to "Console", and check for any red errors. They often contain the full details.
-                            </li>
-                        </ol>
+                        <p className="font-semibold text-yellow-500 underline mb-0">ACTION: DID YOU CLICK REDEPLOY?</p>
+                        <p className="text-[10px] text-yellow-400 opacity-80 italic">Setting the key is not enough. You must go to the "Deployments" tab and click "Redeploy" on the top build.</p>
 
                         <div className="pt-2">
                             <button
@@ -175,9 +158,9 @@ export default function ChatInterface() {
                         </div>
                     </div>
                 )}
-                <div className="text-center py-4 opacity-20 hover:opacity-100 transition-opacity">
-                    <span className="text-[10px] text-[#b4b4b4] uppercase tracking-widest bg-[#1a1a1a] px-2 py-1 rounded">
-                        Build: Feb 27, 2026 - 5:00 PM
+                <div className="text-center py-4 opacity-100">
+                    <span className="text-[10px] text-white font-bold uppercase tracking-widest bg-red-600 px-3 py-1 rounded-full animate-pulse">
+                        LATEST BUILD: March 2, 2026 - 2:30 PM
                     </span>
                 </div>
             </div>

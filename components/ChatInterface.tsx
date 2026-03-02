@@ -19,6 +19,14 @@ export default function ChatInterface() {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
+        if (error) {
+            console.error("DEBUG - Caught error in useEffect:", error);
+            // @ts-ignore
+            window.LAST_ERROR = error;
+        }
+    }, [error]);
+
+    useEffect(() => {
         if (scrollRef.current) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }

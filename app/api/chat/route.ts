@@ -34,15 +34,22 @@ export async function POST(req: Request) {
             messages,
         });
 
-        return result.toDataStreamResponse();
+        return (result as any).toDataStreamResponse();
     } catch (error: any) {
         console.error("DEBUG - Chat API Error:", error);
+
+        // Deep error log for Vercel
+        const errorDetails = {
+            message: error.message || "Unknown Server Error",
+            name: error.name,
+            stack: error.stack?.substring(0, 200),
+            digest: error.digest,
+            cause: error.cause
+        };
+        console.log("CRITICAL_ERROR_JSON:", JSON.stringify(errorDetails));
+
         return new Response(
-            JSON.stringify({
-                message: error.message || "Unknown Server Error",
-                name: error.name,
-                stack: error.stack?.substring(0, 100)
-            }),
+            JSON.stringify(errorDetails),
             { status: 500, headers: { "Content-Type": "application/json" } }
         );
     }

@@ -20,8 +20,8 @@ export default function ChatInterface() {
             const res = await fetch('/api/chat');
             const data = await res.json();
 
-            // Test 2: POST (Functional)
-            let postStatus = "Checking...";
+            // Test 2: POST (Functional PONG)
+            let pongStatus = "Checking...";
             try {
                 const postRes = await fetch('/api/chat', {
                     method: 'POST',
@@ -29,14 +29,28 @@ export default function ChatInterface() {
                     body: JSON.stringify({ messages: [{ role: 'user', content: 'test connectivity' }] })
                 });
                 const postText = await postRes.text();
-                postStatus = postRes.ok ? `SUCCESS (Received Stream Start)` : `FAILED (${postRes.status}): ${postText.substring(0, 100)}`;
+                pongStatus = postRes.ok ? `SUCCESS (${postText})` : `FAILED (${postRes.status})`;
             } catch (e) {
-                postStatus = `NETWORK ERROR: ${e}`;
+                pongStatus = `ERROR: ${e}`;
             }
 
-            alert(`SERVER DIAGNOSTICS:\n\n1. ENVIRONMENT:\n${JSON.stringify(data, null, 2)}\n\n2. MOCK CHAT TEST:\n${postStatus}`);
+            // Test 3: POST (Real AI Call)
+            let aiStatus = "Checking...";
+            try {
+                const aiRes = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ messages: [{ role: 'user', content: 'Say "Connection Successful"' }] })
+                });
+                const aiText = await aiRes.text();
+                aiStatus = aiRes.ok ? `SUCCESS (Received data)` : `FAILED (${aiRes.status}): ${aiText.substring(0, 200)}`;
+            } catch (e) {
+                aiStatus = `AI ERROR: ${e}`;
+            }
+
+            alert(`DIAGNOSTICS:\n\n1. GET (Key Check): ${data.keyLength} chars\n2. POST (Pong): ${pongStatus}\n3. REAL AI TEST: ${aiStatus}`);
         } catch (e) {
-            alert(`Failed to hit diagnostic endpoint: ${e}`);
+            alert(`Failed diagnostics: ${e}`);
         }
     };
 
@@ -210,7 +224,7 @@ export default function ChatInterface() {
                 )}
                 <div className="text-center py-4 opacity-100">
                     <span className="text-[10px] text-white font-bold uppercase tracking-widest bg-red-600 px-3 py-1 rounded-full animate-pulse">
-                        LATEST BUILD: March 4, 2026 - 2:30 PM
+                        LATEST BUILD: March 4, 2026 - 3:00 PM
                     </span>
                 </div>
             </div>

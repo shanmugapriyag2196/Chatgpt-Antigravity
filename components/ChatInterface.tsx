@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 
 export default function ChatInterface() {
     const { messages, input, setInput, handleInputChange, handleSubmit, append, isLoading, error } = useChat({
-        api: '/api/completions',
+        api: '/api/v1/chat',
         onError: (err: any) => {
             console.error("CRITICAL Chat Error Trace:", err);
             // @ts-ignore
@@ -35,10 +35,10 @@ export default function ChatInterface() {
                 pongStatus = `ERROR: ${e}`;
             }
 
-            // Test 3: REAL AI (POST) -> /api/completions
+            // Test 3: REAL AI (POST) -> /api/v1/chat
             let aiStatus = "Checking...";
             try {
-                const aiRes = await fetch('/api/completions', {
+                const aiRes = await fetch('/api/v1/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ messages: [{ role: 'user', content: 'Say "Ready"' }] })
@@ -49,7 +49,7 @@ export default function ChatInterface() {
                 aiStatus = `AI ERROR: ${e}`;
             }
 
-            alert(`SPLIT ROUTE DIAGNOSTICS:\n\n1. DEBUG GET: ${data.keyLength} chars\n2. DEBUG POST (Pong): ${pongStatus}\n3. CHAT POST (Real AI): ${aiStatus}`);
+            alert(`V1 API DIAGNOSTICS:\n\n1. DEBUG GET: ${data.keyLength} chars\n2. DEBUG POST (Pong): ${pongStatus}\n3. CHAT POST (Real AI V1): ${aiStatus}`);
         } catch (e) {
             alert(`Failed diagnostics: ${e}`);
         }
@@ -225,7 +225,7 @@ export default function ChatInterface() {
                 )}
                 <div className="text-center py-4 opacity-100">
                     <span className="text-[10px] text-white font-bold uppercase tracking-widest bg-red-600 px-3 py-1 rounded-full animate-pulse">
-                        LATEST BUILD: March 4, 2026 - 4:15 PM
+                        LATEST BUILD: March 4, 2026 - 4:45 PM
                     </span>
                 </div>
             </div>

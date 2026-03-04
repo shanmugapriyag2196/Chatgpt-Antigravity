@@ -17,40 +17,53 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-    console.log("DEBUG - [API] Request received at /api/chat");
+    console.log(">>>> [API_START] POST /api/chat");
     try {
         const { messages } = await req.json();
+        console.log(">>>> [API_DATA] Messages count:", messages?.length);
+
         const key = process.env.OPENAI_API_KEY;
+        if (!key) {
+            console.error(">>>> [API_ERROR] OPENAI_API_KEY is missing!");
+            throw new Error("SERVER_CONFIG: OPENAI_API_KEY is missing.");
+        }
 
-        if (!key) throw new Error("OPENAI_API_KEY is missing from environment.");
-
+        console.log(">>>> [API_INIT] Initializing OpenAI provider...");
         const openai = createOpenAI({
             apiKey: key,
         });
 
+        console.log(">>>> [API_STREAM] Triggering streamText...");
         const result = streamText({
             model: openai("gpt-4o-mini"),
             system: "You are a helpful AI assistant.",
             messages,
         });
 
+        console.log(">>>> [API_SUCCESS] Returning stream response.");
         return (result as any).toDataStreamResponse();
     } catch (error: any) {
-        console.error("DEBUG - Chat API Error:", error);
-
-        // Deep error log for Vercel
+        // This is THE most important log part. 
+        // We output a unique string so we can find it in Vercel logs easily.
         const errorDetails = {
-            message: error.message || "Unknown Server Error",
-            name: error.name,
-            stack: error.stack?.substring(0, 200),
-            digest: error.digest,
-            cause: error.cause
+            message: error.message || "NO_MESSAGE_PROVIDED",
+            name: error.name || "Error",
+            stack: error.stack?.substring(0, 500),
+            fullError: JSON.stringify(error) === "{}" ? error.toString() : JSON.stringify(error)
         };
-        console.log("CRITICAL_ERROR_JSON:", JSON.stringify(errorDetails));
+
+        console.error(">>>> [REAL_SERVER_ERROR]:", errorDetails);
 
         return new Response(
-            JSON.stringify(errorDetails),
-            { status: 500, headers: { "Content-Type": "application/json" } }
+            JSON.stringify({
+                error: true,
+                details: errorDetails,
+                serverTime: new Date().toISOString()
+            }),
+            {
+                status: 500,
+                headers: { "Content-Type": "application/json" }
+            }
         );
     }
 }

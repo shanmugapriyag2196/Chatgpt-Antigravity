@@ -26,7 +26,7 @@ export async function POST(req: Request) {
         });
 
         console.log(">>>> [V1_CHAT_SUCCESS] Streaming started");
-        return result.toDataStreamResponse();
+        return (result as any).toDataStreamResponse();
     } catch (error: any) {
         console.error(">>>> [V1_CHAT_CRASH]", error);
         return new Response(JSON.stringify({

@@ -7,42 +7,47 @@ export const dynamic = "force-dynamic";
 export async function GET() {
     const key = process.env.OPENAI_API_KEY;
     return new Response(JSON.stringify({
-        status: "Chat API Active",
+        status: "Engine API Active v2",
         keyLength: key ? key.length : 0,
+        provider: "openai",
         timestamp: new Date().toISOString()
     }), { headers: { "Content-Type": "application/json" } });
 }
 
 export async function POST(req: Request) {
-    console.log(">>>> [CHAT_API] POST received");
+    const requestId = Math.random().toString(36).substring(7);
+    console.log(`>>>> [ENGINE_RECV:${requestId}] POST Request started`);
 
     try {
         const body = await req.json();
+        console.log(`>>>> [ENGINE_BODY:${requestId}] Payload received:`, JSON.stringify(body).substring(0, 100));
 
-        // 1. Connectivity Test (Pong)
+        // Connectivity Pong
         if (body.test === "pong") {
-            return new Response(JSON.stringify({ message: "PONG_SUCCESS" }), {
+            return new Response(JSON.stringify({ message: "PONG_READY", id: requestId }), {
                 headers: { "Content-Type": "application/json" }
             });
         }
 
-        // 2. Real AI Logic
         const { messages } = body;
         const key = process.env.OPENAI_API_KEY;
 
         if (!key) {
-            return new Response("Missing API Key", { status: 500 });
+            console.error(`>>>> [ENGINE_ERROR:${requestId}] API Key missing!`);
+            return new Response("Key Missing", { status: 500 });
         }
+
+        console.log(`>>>> [ENGINE_INIT:${requestId}] Model: gpt-4o-mini, Messages: ${messages?.length}`);
 
         const openai = createOpenAI({ apiKey: key });
 
         const result = streamText({
             model: openai("gpt-4o-mini"),
-            system: "You are a helpful assistant.",
+            system: "You are a helpful assistant. Always provide a clear response.",
             messages,
         });
 
-        console.log(">>>> [ENGINE_SUCCESS] Streaming started");
+        console.log(`>>>> [ENGINE_SUCCESS:${requestId}] Releasing stream response...`);
         return (result as any).toDataStreamResponse();
     } catch (error: any) {
         console.error(">>>> [ENGINE_ERROR]", error);

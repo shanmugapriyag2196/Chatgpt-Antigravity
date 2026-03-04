@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 
 export default function ChatInterface() {
     const { messages, input, setInput, handleInputChange, handleSubmit, append, isLoading, error } = useChat({
-        api: '/api/v1/chat',
+        api: '/api/chat',
         onError: (err: any) => {
             console.error("CRITICAL Chat Error Trace:", err);
             // @ts-ignore
@@ -17,17 +17,17 @@ export default function ChatInterface() {
 
     const checkServerStatus = async () => {
         try {
-            // Test 1: GET (Environment) -> /api/debug
-            const res = await fetch('/api/debug');
+            // Test 1: GET
+            const res = await fetch('/api/chat');
             const data = await res.json();
 
-            // Test 2: POST (Pong) -> /api/debug
+            // Test 2: POST (Pong)
             let pongStatus = "Checking...";
             try {
-                const postRes = await fetch('/api/debug', {
+                const postRes = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ ping: true })
+                    body: JSON.stringify({ test: 'pong' })
                 });
                 const postData = await postRes.json();
                 pongStatus = postRes.ok ? `SUCCESS (${postData.message})` : `FAILED (${postRes.status})`;
@@ -35,10 +35,10 @@ export default function ChatInterface() {
                 pongStatus = `ERROR: ${e}`;
             }
 
-            // Test 3: REAL AI (POST) -> /api/v1/chat
+            // Test 3: REAL AI (POST)
             let aiStatus = "Checking...";
             try {
-                const aiRes = await fetch('/api/v1/chat', {
+                const aiRes = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ messages: [{ role: 'user', content: 'Say "Ready"' }] })
@@ -49,7 +49,7 @@ export default function ChatInterface() {
                 aiStatus = `AI ERROR: ${e}`;
             }
 
-            alert(`V1 API DIAGNOSTICS:\n\n1. DEBUG GET: ${data.keyLength} chars\n2. DEBUG POST (Pong): ${pongStatus}\n3. CHAT POST (Real AI V1): ${aiStatus}`);
+            alert(`UNIVERSAL API DIAGNOSTICS:\n\n1. GET: ${data.keyLength} chars\n2. POST PONG: ${pongStatus}\n3. POST AI: ${aiStatus}`);
         } catch (e) {
             alert(`Failed diagnostics: ${e}`);
         }
@@ -225,7 +225,7 @@ export default function ChatInterface() {
                 )}
                 <div className="text-center py-4 opacity-100">
                     <span className="text-[10px] text-white font-bold uppercase tracking-widest bg-red-600 px-3 py-1 rounded-full animate-pulse">
-                        LATEST BUILD: March 4, 2026 - 5:00 PM
+                        LATEST BUILD: March 4, 2026 - 5:30 PM
                     </span>
                 </div>
             </div>

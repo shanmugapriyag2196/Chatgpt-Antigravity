@@ -17,53 +17,55 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-    console.log(">>>> [API_START] POST /api/chat");
+    console.log(">>>> [API_POST_START] Timestamp:", new Date().toISOString());
     try {
-        const { messages } = await req.json();
-        console.log(">>>> [API_DATA] Messages count:", messages?.length);
+        const body = await req.json();
+        const { messages } = body;
+
+        console.log(">>>> [API_PAYLOAD] Messages length:", messages?.length);
+        if (!messages || messages.length === 0) {
+            console.error(">>>> [API_ERROR] No messages in payload");
+            return new Response("Error: No messages provided in request", { status: 400 });
+        }
 
         const key = process.env.OPENAI_API_KEY;
         if (!key) {
-            console.error(">>>> [API_ERROR] OPENAI_API_KEY is missing!");
-            throw new Error("SERVER_CONFIG: OPENAI_API_KEY is missing.");
+            console.error(">>>> [API_ERROR] OPENAI_API_KEY is missing from environment");
+            return new Response("Error: Server Configuration Error (Missing Key)", { status: 500 });
         }
 
-        console.log(">>>> [API_INIT] Initializing OpenAI provider...");
+        console.log(">>>> [API_INIT] Initializing OpenAI client...");
         const openai = createOpenAI({
             apiKey: key,
         });
 
-        console.log(">>>> [API_STREAM] Triggering streamText...");
+        console.log(">>>> [API_OPENAI] Calling streamText...");
         const result = streamText({
             model: openai("gpt-4o-mini"),
             system: "You are a helpful AI assistant.",
             messages,
         });
 
-        console.log(">>>> [API_SUCCESS] Returning stream response.");
-        return (result as any).toDataStreamResponse();
+        console.log(">>>> [API_SUCCESS] Stream initialized. Sending response...");
+        return result.toDataStreamResponse();
     } catch (error: any) {
-        // This is THE most important log part. 
-        // We output a unique string so we can find it in Vercel logs easily.
-        const errorDetails = {
-            message: error.message || "NO_MESSAGE_PROVIDED",
-            name: error.name || "Error",
-            stack: error.stack?.substring(0, 500),
-            fullError: JSON.stringify(error) === "{}" ? error.toString() : JSON.stringify(error)
+        console.error(">>>> [API_CRASH] Critical failure:", error);
+
+        const errorInfo = {
+            message: error.message || "No error message provided",
+            name: error.name || "UnknownError",
+            stack: error.stack?.substring(0, 300),
+            cause: error.cause
         };
 
-        console.error(">>>> [REAL_SERVER_ERROR]:", errorDetails);
-
-        return new Response(
-            JSON.stringify({
-                error: true,
-                details: errorDetails,
-                serverTime: new Date().toISOString()
-            }),
-            {
-                status: 500,
-                headers: { "Content-Type": "application/json" }
-            }
-        );
+        console.log(">>>> [API_RECOVERY] Returning detailed error JSON");
+        return new Response(JSON.stringify({
+            isError: true,
+            message: "SERVER_CRASH_DURING_INITIALIZATION",
+            details: errorInfo
+        }), {
+            status: 500,
+            headers: { "Content-Type": "application/json" }
+        });
     }
 }

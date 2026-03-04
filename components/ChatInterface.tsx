@@ -16,9 +16,25 @@ export default function ChatInterface() {
 
     const checkServerStatus = async () => {
         try {
+            // Test 1: GET (Environment)
             const res = await fetch('/api/chat');
             const data = await res.json();
-            alert(`SERVER STATUS:\n${JSON.stringify(data, null, 2)}`);
+
+            // Test 2: POST (Functional)
+            let postStatus = "Checking...";
+            try {
+                const postRes = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ messages: [{ role: 'user', content: 'test connectivity' }] })
+                });
+                const postText = await postRes.text();
+                postStatus = postRes.ok ? `SUCCESS (Received Stream Start)` : `FAILED (${postRes.status}): ${postText.substring(0, 100)}`;
+            } catch (e) {
+                postStatus = `NETWORK ERROR: ${e}`;
+            }
+
+            alert(`SERVER DIAGNOSTICS:\n\n1. ENVIRONMENT:\n${JSON.stringify(data, null, 2)}\n\n2. MOCK CHAT TEST:\n${postStatus}`);
         } catch (e) {
             alert(`Failed to hit diagnostic endpoint: ${e}`);
         }

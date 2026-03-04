@@ -1,40 +1,20 @@
-import { createOpenAI } from "@ai-sdk/openai";
-import { streamText } from "ai";
-
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
-    console.log(">>>> [CHAT_POST] Request received");
-
+    console.log(">>>> [COMPLETIONS_TEST] POST received");
     try {
-        const { messages } = await req.json();
-        const key = process.env.OPENAI_API_KEY;
-
-        if (!key) {
-            console.error(">>>> [CHAT_ERROR] API Key missing");
-            return new Response("API Key not configured", { status: 500 });
-        }
-
-        const openai = createOpenAI({ apiKey: key });
-
-        const result = streamText({
-            model: openai("gpt-4o-mini"),
-            system: "You are a helpful assistant.",
-            messages,
-        });
-
-        console.log(">>>> [CHAT_SUCCESS] Streaming started");
-        return result.toDataStreamResponse();
-    } catch (error: any) {
-        console.error(">>>> [CHAT_CRASH]", error);
+        const body = await req.json();
         return new Response(JSON.stringify({
-            error: true,
-            message: error.message || "Unknown error",
-            stack: error.stack?.substring(0, 300)
-        }), {
-            status: 500,
-            headers: { "Content-Type": "application/json" }
-        });
+            message: "COMPLETIONS_PATH_IS_WORKING",
+            received: body ? "YES" : "NO",
+            timestamp: new Date().toISOString()
+        }), { headers: { "Content-Type": "application/json" } });
+    } catch (e: any) {
+        return new Response(JSON.stringify({ error: e.message }), { status: 500 });
     }
+}
+
+export async function GET() {
+    return new Response("Completions endpoint active (GET)");
 }

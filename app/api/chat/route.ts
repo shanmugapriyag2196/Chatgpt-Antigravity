@@ -1,71 +1,70 @@
 import { createOpenAI } from "@ai-sdk/openai";
 import { streamText } from "ai";
+import { NextResponse } from "next/server";
 
-// Using Node.js runtime for build stability
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-// Diagnostic GET handler - helps user verify environment without complex fetch
+// Diagnostic GET handler
 export async function GET() {
     const key = process.env.OPENAI_API_KEY;
-    return new Response(JSON.stringify({
+    return NextResponse.json({
         status: "Diagnostic Endpoint Active",
+        method: "GET",
         keyPresent: !!key,
         keyLength: key ? key.length : 0,
-        keyPrefix: key ? key.substring(0, 7) : "N/A",
         timestamp: new Date().toISOString()
-    }), { headers: { "Content-Type": "application/json" } });
+    });
+}
+
+// OPTIONS handler for potential CORS/Preflight issues
+export async function OPTIONS() {
+    return new Response(null, {
+        status: 204,
+        headers: {
+            'Allow': 'GET, POST, OPTIONS',
+            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        },
+    });
 }
 
 export async function POST(req: Request) {
-    console.log(">>>> [API_POST_START] Timestamp:", new Date().toISOString());
+    console.log(">>>> [API_POST] Request received");
+
     try {
         const body = await req.json();
         const { messages } = body;
 
-        console.log(">>>> [API_PAYLOAD] Messages length:", messages?.length);
-        if (!messages || messages.length === 0) {
-            console.error(">>>> [API_ERROR] No messages in payload");
-            return new Response("Error: No messages provided in request", { status: 400 });
+        // BARE MINIMUM TEST: If message is "ping", return "pong"
+        if (messages && messages[0]?.content === "test connectivity") {
+            console.log(">>>> [API_POST] Connectivity test detected");
+            return new Response("PONG - Server is accepting POST requests", { status: 200 });
         }
 
         const key = process.env.OPENAI_API_KEY;
         if (!key) {
-            console.error(">>>> [API_ERROR] OPENAI_API_KEY is missing from environment");
-            return new Response("Error: Server Configuration Error (Missing Key)", { status: 500 });
+            console.error(">>>> [API_POST] Missing key");
+            return NextResponse.json({ error: "Missing API Key" }, { status: 500 });
         }
 
-        console.log(">>>> [API_INIT] Initializing OpenAI client...");
-        const openai = createOpenAI({
-            apiKey: key,
-        });
+        const openai = createOpenAI({ apiKey: key });
 
-        console.log(">>>> [API_OPENAI] Calling streamText...");
         const result = streamText({
             model: openai("gpt-4o-mini"),
-            system: "You are a helpful AI assistant.",
+            system: "You are a helpful assistant.",
             messages,
         });
 
-        console.log(">>>> [API_SUCCESS] Stream initialized. Sending response...");
+        console.log(">>>> [API_POST] Streaming started");
         return result.toDataStreamResponse();
+
     } catch (error: any) {
-        console.error(">>>> [API_CRASH] Critical failure:", error);
-
-        const errorInfo = {
-            message: error.message || "No error message provided",
-            name: error.name || "UnknownError",
-            stack: error.stack?.substring(0, 300),
-            cause: error.cause
-        };
-
-        console.log(">>>> [API_RECOVERY] Returning detailed error JSON");
-        return new Response(JSON.stringify({
-            isError: true,
-            message: "SERVER_CRASH_DURING_INITIALIZATION",
-            details: errorInfo
-        }), {
-            status: 500,
-            headers: { "Content-Type": "application/json" }
-        });
+        console.error(">>>> [API_POST] Error:", error);
+        return NextResponse.json({
+            error: true,
+            message: error.message || "Unknown Server Error",
+            stack: error.stack?.substring(0, 200)
+        }, { status: 500 });
     }
 }

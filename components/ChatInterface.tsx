@@ -8,6 +8,12 @@ import { cn } from "@/lib/utils";
 export default function ChatInterface() {
     const { messages, input, setInput, handleInputChange, handleSubmit, append, isLoading, error } = useChat({
         api: '/api/engine',
+        onResponse: (response) => {
+            console.log(">>>> [CLIENT] Response received:", response.status);
+        },
+        onFinish: (message) => {
+            console.log(">>>> [CLIENT] Stream finished:", message.content.substring(0, 50));
+        },
         onError: (err: any) => {
             console.error("CRITICAL Chat Error Trace:", err);
             // @ts-ignore
@@ -225,7 +231,7 @@ export default function ChatInterface() {
                 )}
                 <div className="text-center py-4 opacity-100">
                     <span className="text-[10px] text-white font-bold uppercase tracking-widest bg-red-600 px-3 py-1 rounded-full animate-pulse">
-                        LATEST BUILD: March 4, 2026 - 8:30 PM
+                        LATEST BUILD: March 4, 2026 - 8:45 PM
                     </span>
                 </div>
             </div>

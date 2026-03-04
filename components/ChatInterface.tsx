@@ -146,14 +146,24 @@ export default function ChatInterface() {
                 {error && (
                     <div className="max-w-3xl mx-auto p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm space-y-3">
                         <div className="flex items-center gap-2">
-                            <span className="font-bold text-lg">⚠️ CRITICAL ERROR DETECTED</span>
+                            <span className="font-bold text-lg">⚠️ SERVER ERROR DETECTED</span>
                         </div>
                         <div className="bg-black/40 p-3 rounded-lg border border-red-500/10 font-mono text-xs overflow-x-auto">
-                            <p className="font-semibold text-red-500 mb-1">Deep Error Metadata:</p>
-                            <pre className="whitespace-pre-wrap">
+                            <p className="font-semibold text-red-500 mb-1">Server Message:</p>
+                            <p className="text-white">
+                                {(() => {
+                                    try {
+                                        const parsed = JSON.parse(error.message);
+                                        return parsed.details?.message || parsed.message || error.message;
+                                    } catch (e) {
+                                        return error.message || "The server failed to respond with a message.";
+                                    }
+                                })()}
+                            </p>
+                            <p className="mt-4 font-semibold text-yellow-500 mb-1">Raw Technical Data:</p>
+                            <pre className="whitespace-pre-wrap opacity-60">
                                 {JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}
                             </pre>
-                            <p className="mt-2 text-yellow-500 font-bold">Try typing `window.LAST_ERROR` in F12 console again now.</p>
                         </div>
 
                         <p className="font-semibold text-yellow-500 underline mb-0 uppercase tracking-widest text-[10px]">Action: Check Vercel Logs or Redeploy</p>

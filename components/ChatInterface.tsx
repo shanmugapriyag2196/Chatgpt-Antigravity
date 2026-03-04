@@ -18,13 +18,13 @@ export default function ChatInterface() {
     const checkServerStatus = async () => {
         try {
             // Test 1: GET
-            const res = await fetch('/api/chat');
+            const res = await fetch('/api/engine');
             const data = await res.json();
 
             // Test 2: POST (Pong)
             let pongStatus = "Checking...";
             try {
-                const postRes = await fetch('/api/chat', {
+                const postRes = await fetch('/api/engine', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ test: 'pong' })
@@ -38,7 +38,7 @@ export default function ChatInterface() {
             // Test 3: REAL AI (POST)
             let aiStatus = "Checking...";
             try {
-                const aiRes = await fetch('/api/chat', {
+                const aiRes = await fetch('/api/engine', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ messages: [{ role: 'user', content: 'Say "Ready"' }] })
@@ -49,7 +49,7 @@ export default function ChatInterface() {
                 aiStatus = `AI ERROR: ${e}`;
             }
 
-            alert(`UNIVERSAL API DIAGNOSTICS:\n\n1. GET: ${data.keyLength} chars\n2. POST PONG: ${pongStatus}\n3. POST AI: ${aiStatus}`);
+            alert(`ENGINE API DIAGNOSTICS:\n\n1. GET: ${data.keyLength} chars\n2. POST PONG: ${pongStatus}\n3. POST AI: ${aiStatus}`);
         } catch (e) {
             alert(`Failed diagnostics: ${e}`);
         }

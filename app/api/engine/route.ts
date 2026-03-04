@@ -42,9 +42,10 @@ export async function POST(req: Request) {
             messages,
         });
 
-        return (result as any).toDataStreamResponse();
+        console.log(">>>> [ENGINE_SUCCESS] Streaming started");
+        return result.toTextStreamResponse();
     } catch (error: any) {
-        console.error(">>>> [CHAT_API_ERROR]", error);
+        console.error(">>>> [ENGINE_ERROR]", error);
         return new Response(JSON.stringify({
             error: true,
             message: error.message || "Unknown Error",

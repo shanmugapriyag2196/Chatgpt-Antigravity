@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 
 export default function ChatInterface() {
     const { messages, input, setInput, handleInputChange, handleSubmit, append, isLoading, error } = useChat({
+        api: '/api/completions',
         onError: (err: any) => {
             console.error("CRITICAL Chat Error Trace:", err);
             // @ts-ignore
@@ -34,10 +35,10 @@ export default function ChatInterface() {
                 pongStatus = `ERROR: ${e}`;
             }
 
-            // Test 3: REAL AI (POST) -> /api/chat
+            // Test 3: REAL AI (POST) -> /api/completions
             let aiStatus = "Checking...";
             try {
-                const aiRes = await fetch('/api/chat', {
+                const aiRes = await fetch('/api/completions', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ messages: [{ role: 'user', content: 'Say "Ready"' }] })
@@ -224,7 +225,7 @@ export default function ChatInterface() {
                 )}
                 <div className="text-center py-4 opacity-100">
                     <span className="text-[10px] text-white font-bold uppercase tracking-widest bg-red-600 px-3 py-1 rounded-full animate-pulse">
-                        LATEST BUILD: March 4, 2026 - 3:15 PM
+                        LATEST BUILD: March 4, 2026 - 3:45 PM
                     </span>
                 </div>
             </div>

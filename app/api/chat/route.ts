@@ -42,7 +42,7 @@ export async function POST(req: Request) {
             messages,
         });
 
-        return result.toDataStreamResponse();
+        return (result as any).toDataStreamResponse();
     } catch (error: any) {
         console.error(">>>> [CHAT_API_ERROR]", error);
         return new Response(JSON.stringify({

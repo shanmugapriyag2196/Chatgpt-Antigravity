@@ -16,39 +16,39 @@ export default function ChatInterface() {
 
     const checkServerStatus = async () => {
         try {
-            // Test 1: GET (Environment)
-            const res = await fetch('/api/chat');
+            // Test 1: GET (Environment) -> /api/debug
+            const res = await fetch('/api/debug');
             const data = await res.json();
 
-            // Test 2: POST (Functional PONG)
+            // Test 2: POST (Pong) -> /api/debug
             let pongStatus = "Checking...";
             try {
-                const postRes = await fetch('/api/chat', {
+                const postRes = await fetch('/api/debug', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ messages: [{ role: 'user', content: 'test connectivity' }] })
+                    body: JSON.stringify({ ping: true })
                 });
-                const postText = await postRes.text();
-                pongStatus = postRes.ok ? `SUCCESS (${postText})` : `FAILED (${postRes.status})`;
+                const postData = await postRes.json();
+                pongStatus = postRes.ok ? `SUCCESS (${postData.message})` : `FAILED (${postRes.status})`;
             } catch (e) {
                 pongStatus = `ERROR: ${e}`;
             }
 
-            // Test 3: POST (Real AI Call)
+            // Test 3: REAL AI (POST) -> /api/chat
             let aiStatus = "Checking...";
             try {
                 const aiRes = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ messages: [{ role: 'user', content: 'Say "Connection Successful"' }] })
+                    body: JSON.stringify({ messages: [{ role: 'user', content: 'Say "Ready"' }] })
                 });
                 const aiText = await aiRes.text();
-                aiStatus = aiRes.ok ? `SUCCESS (Received data)` : `FAILED (${aiRes.status}): ${aiText.substring(0, 200)}`;
+                aiStatus = aiRes.ok ? `SUCCESS (Received data)` : `FAILED (${aiRes.status}): ${aiText.substring(0, 100)}`;
             } catch (e) {
                 aiStatus = `AI ERROR: ${e}`;
             }
 
-            alert(`DIAGNOSTICS:\n\n1. GET (Key Check): ${data.keyLength} chars\n2. POST (Pong): ${pongStatus}\n3. REAL AI TEST: ${aiStatus}`);
+            alert(`SPLIT ROUTE DIAGNOSTICS:\n\n1. DEBUG GET: ${data.keyLength} chars\n2. DEBUG POST (Pong): ${pongStatus}\n3. CHAT POST (Real AI): ${aiStatus}`);
         } catch (e) {
             alert(`Failed diagnostics: ${e}`);
         }
@@ -224,7 +224,7 @@ export default function ChatInterface() {
                 )}
                 <div className="text-center py-4 opacity-100">
                     <span className="text-[10px] text-white font-bold uppercase tracking-widest bg-red-600 px-3 py-1 rounded-full animate-pulse">
-                        LATEST BUILD: March 4, 2026 - 3:00 PM
+                        LATEST BUILD: March 4, 2026 - 3:15 PM
                     </span>
                 </div>
             </div>

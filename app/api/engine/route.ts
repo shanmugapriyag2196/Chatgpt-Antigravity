@@ -43,7 +43,7 @@ export async function POST(req: Request) {
         });
 
         console.log(">>>> [ENGINE_SUCCESS] Streaming started");
-        return result.toTextStreamResponse();
+        return (result as any).toDataStreamResponse();
     } catch (error: any) {
         console.error(">>>> [ENGINE_ERROR]", error);
         return new Response(JSON.stringify({

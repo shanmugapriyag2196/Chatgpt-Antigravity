@@ -231,7 +231,7 @@ export default function ChatInterface() {
                 )}
                 <div className="text-center py-4 opacity-100">
                     <span className="text-[10px] text-white font-bold uppercase tracking-widest bg-red-600 px-3 py-1 rounded-full animate-pulse">
-                        LATEST BUILD: March 6, 2026 - 4:15 PM
+                        LATEST BUILD: March 6, 2026 - 5:30 PM
                     </span>
                 </div>
             </div>

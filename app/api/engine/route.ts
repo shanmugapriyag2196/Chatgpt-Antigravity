@@ -5,10 +5,12 @@ export const runtime = "edge";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-    const key = process.env.OPENAI_API_KEY;
+    const key = process.env.OPENAI_API_KEY || "";
+    const hint = key.length > 8 ? `${key.substring(0, 4)}...${key.substring(key.length - 4)}` : "INVALID_LENGTH";
     return new Response(JSON.stringify({
-        status: "Engine API Active v3",
-        keyLength: key ? key.length : 0,
+        status: "Engine API Active v4",
+        keyLength: key.length,
+        keyHint: hint,
         provider: "openai",
         timestamp: new Date().toISOString()
     }), { headers: { "Content-Type": "application/json" } });

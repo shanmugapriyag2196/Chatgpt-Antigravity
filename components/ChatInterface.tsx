@@ -73,7 +73,7 @@ export default function ChatInterface() {
                 aiStatus = `AI ERROR: ${e}`;
             }
 
-            alert(`ENGINE API DIAGNOSTICS (v11):\n\n1. GET: ${data.keyLength} chars (HINT: ${data.keyHint})\n2. POST PONG: ${pongStatus}\n3. MOCK STREAM: ${mockStatus}\n4. POST AI: ${aiStatus}\n\nNOTE: If keyHint starts with "sk-p" it is likely correct. If it starts with "OPEN", you pasted the wrong text into Vercel.`);
+            alert(`ENGINE API DIAGNOSTICS (v12):\n\n1. GET: ${data.keyLength} chars (HINT: ${data.keyHint})\n2. POST PONG: ${pongStatus}\n3. MOCK STREAM: ${mockStatus}\n4. POST AI: ${aiStatus}\n\nNOTE: If keyHint starts with "sk-p" it is likely correct. If it starts with "OPEN", you pasted the wrong text into Vercel.`);
         } catch (e) {
             alert(`Failed diagnostics: ${e}`);
         }
@@ -143,157 +143,122 @@ export default function ChatInterface() {
     };
 
     return (
-        <div className="flex-1 flex flex-col h-full overflow-hidden relative">
+        <div className="flex-1 flex flex-col h-full overflow-hidden relative bg-[#111]">
             {/* Header */}
-            <header className="h-14 border-b border-[#2f2f2f] flex items-center px-4 justify-between bg-background/50 backdrop-blur-md z-10">
+            <header className="h-16 border-b border-[#2f2f2f] flex items-center px-6 justify-between bg-black/50 backdrop-blur-xl z-20">
                 <div className="flex items-center gap-4">
-                    <h1 className="font-semibold text-lg">ChatGPT Clone</h1>
+                    <h1 className="font-bold text-xl tracking-tight text-white">Result Dashboard</h1>
                     <button
                         onClick={checkServerStatus}
-                        className="text-[10px] bg-blue-500/20 hover:bg-blue-500/40 text-blue-400 px-2 py-1 rounded border border-blue-500/30 transition-all font-bold"
+                        className="text-[9px] bg-red-500/10 hover:bg-red-500/20 text-red-500 px-3 py-1 rounded-full border border-red-500/20 transition-all font-black uppercase tracking-tighter"
                     >
-                        DEBUG: Check Connection
+                        Check Core Connection
                     </button>
+                </div>
+                <div className="text-right">
+                    <span className="text-[10px] text-zinc-500 font-medium uppercase tracking-widest">SYSTEM ACTIVE v12</span>
                 </div>
             </header>
 
-            {/* Messages */}
+            {/* Messages Area */}
             <div
                 ref={scrollRef}
-                className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 scroll-smooth"
+                className="flex-1 overflow-y-auto p-4 md:p-12 space-y-8 scroll-smooth"
             >
                 {messages.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center text-[#b4b4b4]">
-                        <div className="w-12 h-12 bg-[#3c3c3c] rounded-full flex items-center justify-center mb-4">
-                            <Plus className="w-6 h-6" />
+                    <div className="h-full flex flex-col items-center justify-center text-zinc-600">
+                        <div className="w-16 h-16 bg-zinc-900 border border-zinc-800 rounded-2xl flex items-center justify-center mb-6 shadow-2xl">
+                            <Plus className="w-8 h-8 opacity-50" />
                         </div>
-                        <p className="text-xl font-medium text-foreground">How can I help you today?</p>
+                        <p className="text-2xl font-light text-zinc-400">Launch a new query</p>
                     </div>
                 ) : (
                     messages.map((m: Message) => (
                         <div
                             key={m.id}
                             className={cn(
-                                "flex gap-4 max-w-3xl mx-auto items-start group animation-slide-up",
+                                "flex gap-6 max-w-4xl mx-auto items-start group animation-slide-up",
                                 m.role === "user" ? "justify-end" : "justify-start"
                             )}
                         >
                             {m.role !== "user" && (
-                                <div className="w-8 h-8 rounded-full bg-[#10a37f] flex items-center justify-center text-white shrink-0">
-                                    <span className="text-xs">AI</span>
+                                <div className="w-10 h-10 rounded-xl bg-[#10a37f] flex items-center justify-center text-white shrink-0 shadow-lg shadow-[#10a37f]/20">
+                                    <span className="text-[10px] font-bold">AI</span>
                                 </div>
                             )}
                             <div
                                 className={cn(
-                                    "p-4 rounded-2xl max-w-[85%] border shadow-sm",
+                                    "p-6 rounded-2xl max-w-[90%] border shadow-xl relative transition-all",
                                     m.role === "user"
-                                        ? "bg-[#3c3c3c] text-[#ececec] border-transparent"
-                                        : "bg-[#1e1e1e] text-[#ececec] border-[#333]"
+                                        ? "bg-zinc-800 text-zinc-100 border-zinc-700"
+                                        : "bg-zinc-900/50 text-zinc-100 border-zinc-800 backdrop-blur-sm"
                                 )}
                             >
                                 {m.role !== "user" && (
-                                    <div className="text-[10px] font-bold text-[#10a37f] uppercase tracking-wider mb-2 flex items-center gap-2">
-                                        <div className="w-1.5 h-1.5 bg-[#10a37f] rounded-full animate-pulse"></div>
+                                    <div className="text-[10px] font-black text-[#10a37f] uppercase tracking-[0.2em] mb-4 flex items-center gap-3">
+                                        <div className="w-2 h-2 bg-[#10a37f] rounded-full animate-pulse shadow-[0_0_8px_#10a37f]"></div>
                                         Result Response:
                                     </div>
                                 )}
-                                <div className="prose prose-invert max-w-none whitespace-pre-wrap leading-relaxed">
-                                    {m.content}
+                                <div className="prose prose-invert max-w-none whitespace-pre-wrap leading-relaxed font-medium">
+                                    {m.content || (isLoading && m.role !== 'user' ? "Generating dashboard results..." : "Waiting for response...")}
                                 </div>
                             </div>
                         </div>
                     ))
                 )}
                 {error && (
-                    <div className="max-w-3xl mx-auto p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm space-y-3">
-                        <div className="flex items-center gap-2">
-                            <span className="font-bold text-lg">⚠️ SERVER ERROR DETECTED</span>
+                    <div className="max-w-4xl mx-auto p-6 bg-red-950/20 border border-red-900/50 rounded-2xl text-red-400 text-sm space-y-4">
+                        <div className="flex items-center gap-3">
+                            <div className="w-2 h-2 bg-red-500 rounded-full animate-ping"></div>
+                            <span className="font-bold tracking-widest uppercase">Critical Analysis Error</span>
                         </div>
-                        <div className="bg-black/40 p-3 rounded-lg border border-red-500/10 font-mono text-xs overflow-x-auto">
-                            <p className="font-semibold text-red-500 mb-1">Server Message:</p>
-                            <p className="text-white">
-                                {(() => {
-                                    try {
-                                        const parsed = JSON.parse(error.message);
-                                        return parsed.details?.message || parsed.message || error.message;
-                                    } catch (e) {
-                                        return error.message || "The server failed to respond with a message.";
-                                    }
-                                })()}
-                            </p>
-                            <p className="mt-4 font-semibold text-yellow-500 mb-1">Raw Technical Data:</p>
-                            <pre className="whitespace-pre-wrap opacity-60">
-                                {JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}
-                            </pre>
+                        <div className="bg-black/60 p-4 rounded-xl border border-red-900/30 font-mono text-xs overflow-x-auto leading-loose">
+                            {error.message}
                         </div>
-
-                        <p className="font-semibold text-yellow-500 underline mb-0 uppercase tracking-widest text-[10px]">Action: Check Vercel Logs or Redeploy</p>
-
-                        <div className="pt-2">
-                            <button
-                                onClick={() => window.location.reload()}
-                                className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 rounded-lg transition-colors text-xs font-semibold"
-                            >
-                                Refresh Page & Try Again
-                            </button>
-                        </div>
+                        <button onClick={() => window.location.reload()} className="text-[10px] font-bold underline uppercase tracking-tighter opacity-50 hover:opacity-100 transition-opacity">Reset Engine</button>
                     </div>
                 )}
-                {isLoading && (
-                    <div className="flex gap-4 max-w-3xl mx-auto items-start group animation-pulse">
-                        <div className="w-8 h-8 rounded-full bg-[#10a37f] flex items-center justify-center text-white shrink-0">
-                            <span className="text-xs">AI</span>
-                        </div>
-                        <div className="p-4 rounded-2xl bg-transparent text-[#ececec]">
-                            <div className="flex gap-1 items-center h-6">
-                                <div className="w-1.5 h-1.5 bg-[#b4b4b4] rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                                <div className="w-1.5 h-1.5 bg-[#b4b4b4] rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                                <div className="w-1.5 h-1.5 bg-[#b4b4b4] rounded-full animate-bounce"></div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-                <div className="text-center py-4 opacity-100">
-                    <span className="text-[10px] text-white font-bold uppercase tracking-widest bg-red-600 px-3 py-1 rounded-full animate-pulse">
-                        LATEST BUILD: March 6, 2026 - 8:30 PM
+
+                {/* Spacer for build footer */}
+                <div className="h-20"></div>
+            </div>
+
+            {/* Persistent Build Badge (Fixed at bottom right) */}
+            <div className="fixed bottom-24 right-6 z-50 pointer-events-none">
+                <div className="bg-blue-600/90 backdrop-blur-md px-4 py-1.5 rounded-full border border-blue-400/30 shadow-2xl flex items-center gap-3">
+                    <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                    <span className="text-[9px] text-white font-black uppercase tracking-[0.2em] whitespace-nowrap">
+                        Final Sync: March 6, 2026 - 9:00 PM
                     </span>
                 </div>
             </div>
 
             {/* Input Area */}
-            <div className="p-4 md:p-8 pt-0">
-                <div className="max-w-3xl mx-auto relative bg-[#2f2f2f] rounded-2xl border border-[#3e3e3e] shadow-xl">
-                    {/* File Previews */}
+            <div className="p-4 md:p-8 pt-0 bg-gradient-to-t from-[#111] via-[#111] to-transparent z-10">
+                <div className="max-w-4xl mx-auto relative bg-zinc-900 border border-zinc-800 rounded-3xl shadow-2xl transition-all focus-within:border-zinc-700">
                     {files.length > 0 && (
-                        <div className="p-3 flex flex-wrap gap-2 border-b border-[#3e3e3e]">
+                        <div className="p-4 flex flex-wrap gap-2 border-b border-zinc-800 bg-zinc-900/50 rounded-t-3xl">
                             {files.map((file, i) => (
-                                <div key={i} className="bg-[#3c3c3c] p-2 rounded-lg flex items-center gap-2 text-sm">
-                                    <span className="truncate max-w-[150px]">{file.name}</span>
-                                    <button onClick={() => removeFile(i)} className="hover:text-red-400">
-                                        <X className="w-4 h-4" />
+                                <div key={i} className="bg-zinc-800 p-2 rounded-xl flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-zinc-400 border border-zinc-700/50">
+                                    <span className="truncate max-w-[120px]">{file.name}</span>
+                                    <button onClick={() => removeFile(i)} className="hover:text-red-400 transition-colors">
+                                        <X className="w-3 h-3" />
                                     </button>
                                 </div>
                             ))}
                         </div>
                     )}
 
-                    <form
-                        onSubmit={handleSubmitWithFiles}
-                        className="flex items-end p-2"
-                    >
-                        <input
-                            type="file"
-                            ref={fileInputRef}
-                            className="hidden"
-                            multiple
-                            onChange={onFileChange}
-                        />
+                    <form onSubmit={handleSubmitWithFiles} className="flex items-center p-3">
+                        <input type="file" ref={fileInputRef} className="hidden" multiple onChange={onFileChange} />
                         <button
                             type="button"
                             onClick={() => fileInputRef.current?.click()}
-                            className="p-3 hover:bg-[#3c3c3c] rounded-xl text-[#b4b4b4] transition-colors"
+                            className="p-4 hover:bg-zinc-800 rounded-2xl text-zinc-500 transition-all hover:text-white group"
+                            title="Attach data source"
                         >
-                            <Paperclip className="w-5 h-5" />
+                            <Paperclip className="w-5 h-5 group-hover:rotate-12 transition-transform" />
                         </button>
                         <textarea
                             value={input}
@@ -307,21 +272,18 @@ export default function ChatInterface() {
                                     }
                                 }
                             }}
-                            placeholder="Message ChatGPT..."
-                            className="flex-1 bg-transparent border-none focus:ring-0 resize-none p-3 max-h-48 scrollbar-hide text-[#ececec] placeholder-[#b4b4b4]"
+                            placeholder="Input your dashboard query..."
+                            className="flex-1 bg-transparent border-none focus:ring-0 resize-none p-4 max-h-48 scrollbar-hide text-zinc-100 placeholder-zinc-600 font-medium"
                             rows={1}
                         />
                         <button
                             type="submit"
-                            disabled={(!input.trim() && files.length === 0) || isUploading}
-                            className="p-3 bg-foreground text-background rounded-xl disabled:opacity-30 disabled:hover:bg-foreground hover:bg-[#d1d1d1] transition-all"
+                            disabled={(!input.trim() && files.length === 0) || isUploading || isLoading}
+                            className="p-4 bg-white text-black rounded-2xl disabled:opacity-10 hover:bg-zinc-200 transition-all shadow-lg active:scale-95"
                         >
                             <Send className={cn("w-5 h-5", (isUploading || isLoading) && "animate-pulse")} />
                         </button>
                     </form>
-                    <div className="text-[10px] text-center text-[#b4b4b4] pb-2">
-                        ChatGPT can make mistakes. Check important info.
-                    </div>
                 </div>
             </div>
         </div>

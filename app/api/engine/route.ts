@@ -8,7 +8,7 @@ export async function GET() {
     const key = process.env.OPENAI_API_KEY || "";
     const hint = key.length > 8 ? `${key.substring(0, 4)}...${key.substring(key.length - 4)}` : "INVALID_LENGTH";
     return new Response(JSON.stringify({
-        status: "Engine API Active v11",
+        status: "Engine API Active v12",
         keyLength: key.length,
         keyHint: hint,
         provider: "openai",
@@ -75,12 +75,8 @@ export async function POST(req: Request) {
                 }
 
                 const modelNames = listData.data?.map((m: any) => m.id) || [];
-                const has4 = modelNames.includes("gpt-4");
-                const has4o = modelNames.includes("gpt-4o");
-                const has35 = modelNames.includes("gpt-3.5-turbo");
-
-                // Test 2: Generate with first available (Priority: gpt-4 because user confirmed it's in list)
-                const targetModel = has4 ? "gpt-4" : (has4o ? "gpt-4o" : (has35 ? "gpt-3.5-turbo" : modelNames[0]));
+                // Test gpt-3.5-turbo as it's the most likely to work if gpt-4 is restricted
+                const targetModel = modelNames.includes("gpt-3.5-turbo") ? "gpt-3.5-turbo" : (modelNames.includes("gpt-4o") ? "gpt-4o" : modelNames[0]);
 
                 if (!targetModel) {
                     return new Response(JSON.stringify({ success: false, error: "No models available for this key" }), { status: 500 });
@@ -88,15 +84,14 @@ export async function POST(req: Request) {
 
                 const response = await generateText({
                     model: openai(targetModel) as any,
-                    prompt: "Say 'SUPER_READY'",
+                    prompt: "Say 'AI_IS_ACTIVE'",
                 });
 
                 return new Response(JSON.stringify({
                     success: true,
                     text: response.text || "EMPTY",
                     modelUsed: targetModel,
-                    available: modelNames.slice(0, 15),
-                    hasStandardModels: has4 || has4o
+                    available: modelNames.slice(0, 15)
                 }), { headers: { "Content-Type": "application/json" } });
 
             } catch (e: any) {
@@ -114,8 +109,8 @@ export async function POST(req: Request) {
         }
 
         const { messages } = body;
-        // Use GPT-4 as primary since it was explicitly confirmed in user's list
-        const primaryModel = "gpt-4";
+        // FINAL COMPATIBILITY PIVOT: gpt-3.5-turbo
+        const primaryModel = "gpt-3.5-turbo";
 
         console.log(`>>>> [ENGINE_INIT:${requestId}] Model: ${primaryModel}, Messages: ${messages?.length}`);
 

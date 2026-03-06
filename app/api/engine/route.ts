@@ -8,7 +8,7 @@ export async function GET() {
     const key = process.env.OPENAI_API_KEY || "";
     const hint = key.length > 8 ? `${key.substring(0, 4)}...${key.substring(key.length - 4)}` : "INVALID_LENGTH";
     return new Response(JSON.stringify({
-        status: "Engine API Active v8",
+        status: "Engine API Active v9",
         keyLength: key.length,
         keyHint: hint,
         provider: "openai",
@@ -61,7 +61,7 @@ export async function POST(req: Request) {
             try {
                 console.log(`>>>> [ENGINE_DIAG:${requestId}] Testing generateText with gpt-4o...`);
                 const response = await generateText({
-                    model: openai("gpt-4o"),
+                    model: openai("gpt-4o") as any,
                     prompt: "Write exactly 'AI_ACTIVE' and nothing else.",
                 });
 
@@ -93,7 +93,7 @@ export async function POST(req: Request) {
         console.log(`>>>> [ENGINE_INIT:${requestId}] Model: gpt-4o, Messages: ${messages?.length}`);
 
         const result = streamText({
-            model: openai("gpt-4o"),
+            model: openai("gpt-4o") as any,
             system: "You are a helpful assistant. Always provide a clear response.",
             messages,
         });

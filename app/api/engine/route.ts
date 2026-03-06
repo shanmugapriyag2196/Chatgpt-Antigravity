@@ -32,10 +32,14 @@ export async function POST(req: Request) {
         // Mock Stream Test
         if (body.test === "mock") {
             console.log(`>>>> [ENGINE_MOCK:${requestId}] Delivering mock stream...`);
-            return new Response(
-                "0:\"This is a simulated AI response stream to test if the client can display text.\"\n",
-                { headers: { "Content-Type": "text/plain; charset=utf-8" } }
-            );
+            // This is the standard DataStream format for "This is a mock response"
+            const mockStream = `0:"This matches the AI SDK protocol. It should appear in the chat."\nd:{"finishReason":"stop","usage":{"promptTokens":1,"completionTokens":1}}\n`;
+            return new Response(mockStream, {
+                headers: {
+                    "Content-Type": "text/plain; charset=utf-8",
+                    "X-Vercel-AI-Data-Stream": "v1"
+                }
+            });
         }
 
         const { messages } = body;

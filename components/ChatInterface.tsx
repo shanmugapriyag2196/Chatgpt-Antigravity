@@ -73,7 +73,7 @@ export default function ChatInterface() {
                 aiStatus = `AI ERROR: ${e}`;
             }
 
-            alert(`ENGINE API DIAGNOSTICS (v6):\n\n1. GET: ${data.keyLength} chars (HINT: ${data.keyHint})\n2. POST PONG: ${pongStatus}\n3. MOCK STREAM: ${mockStatus}\n4. POST AI: ${aiStatus}\n\nNOTE: If keyHint starts with "sk-p" it is likely correct. If it starts with "OPEN", you pasted the wrong text into Vercel.`);
+            alert(`ENGINE API DIAGNOSTICS (v7):\n\n1. GET: ${data.keyLength} chars (HINT: ${data.keyHint})\n2. POST PONG: ${pongStatus}\n3. MOCK STREAM: ${mockStatus}\n4. POST AI: ${aiStatus}\n\nNOTE: If keyHint starts with "sk-p" it is likely correct. If it starts with "OPEN", you pasted the wrong text into Vercel.`);
         } catch (e) {
             alert(`Failed diagnostics: ${e}`);
         }

@@ -8,7 +8,7 @@ export async function GET() {
     const key = process.env.OPENAI_API_KEY || "";
     const hint = key.length > 8 ? `${key.substring(0, 4)}...${key.substring(key.length - 4)}` : "INVALID_LENGTH";
     return new Response(JSON.stringify({
-        status: "Engine API Active v10",
+        status: "Engine API Active v11",
         keyLength: key.length,
         keyHint: hint,
         provider: "openai",
@@ -75,11 +75,12 @@ export async function POST(req: Request) {
                 }
 
                 const modelNames = listData.data?.map((m: any) => m.id) || [];
+                const has4 = modelNames.includes("gpt-4");
                 const has4o = modelNames.includes("gpt-4o");
-                const has4oMini = modelNames.includes("gpt-4o-mini");
+                const has35 = modelNames.includes("gpt-3.5-turbo");
 
-                // Test 2: Generate with first available
-                const targetModel = has4o ? "gpt-4o" : (has4oMini ? "gpt-4o-mini" : modelNames[0]);
+                // Test 2: Generate with first available (Priority: gpt-4 because user confirmed it's in list)
+                const targetModel = has4 ? "gpt-4" : (has4o ? "gpt-4o" : (has35 ? "gpt-3.5-turbo" : modelNames[0]));
 
                 if (!targetModel) {
                     return new Response(JSON.stringify({ success: false, error: "No models available for this key" }), { status: 500 });
@@ -94,8 +95,8 @@ export async function POST(req: Request) {
                     success: true,
                     text: response.text || "EMPTY",
                     modelUsed: targetModel,
-                    available: modelNames.slice(0, 10),
-                    hasStandardModels: has4o || has4oMini
+                    available: modelNames.slice(0, 15),
+                    hasStandardModels: has4 || has4o
                 }), { headers: { "Content-Type": "application/json" } });
 
             } catch (e: any) {
@@ -113,10 +114,13 @@ export async function POST(req: Request) {
         }
 
         const { messages } = body;
-        console.log(`>>>> [ENGINE_INIT:${requestId}] Model: gpt-4o, Messages: ${messages?.length}`);
+        // Use GPT-4 as primary since it was explicitly confirmed in user's list
+        const primaryModel = "gpt-4";
+
+        console.log(`>>>> [ENGINE_INIT:${requestId}] Model: ${primaryModel}, Messages: ${messages?.length}`);
 
         const result = streamText({
-            model: openai("gpt-4o") as any,
+            model: openai(primaryModel) as any,
             system: "You are a helpful assistant. Always provide a clear response.",
             messages,
         });

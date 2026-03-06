@@ -73,7 +73,7 @@ export default function ChatInterface() {
                 aiStatus = `AI ERROR: ${e}`;
             }
 
-            alert(`ENGINE API DIAGNOSTICS (v10):\n\n1. GET: ${data.keyLength} chars (HINT: ${data.keyHint})\n2. POST PONG: ${pongStatus}\n3. MOCK STREAM: ${mockStatus}\n4. POST AI: ${aiStatus}\n\nNOTE: If keyHint starts with "sk-p" it is likely correct. If it starts with "OPEN", you pasted the wrong text into Vercel.`);
+            alert(`ENGINE API DIAGNOSTICS (v11):\n\n1. GET: ${data.keyLength} chars (HINT: ${data.keyHint})\n2. POST PONG: ${pongStatus}\n3. MOCK STREAM: ${mockStatus}\n4. POST AI: ${aiStatus}\n\nNOTE: If keyHint starts with "sk-p" it is likely correct. If it starts with "OPEN", you pasted the wrong text into Vercel.`);
         } catch (e) {
             alert(`Failed diagnostics: ${e}`);
         }
@@ -185,12 +185,18 @@ export default function ChatInterface() {
                             )}
                             <div
                                 className={cn(
-                                    "p-4 rounded-2xl max-w-[85%]",
+                                    "p-4 rounded-2xl max-w-[85%] border shadow-sm",
                                     m.role === "user"
-                                        ? "bg-[#3c3c3c] text-[#ececec]"
-                                        : "bg-transparent text-[#ececec]"
+                                        ? "bg-[#3c3c3c] text-[#ececec] border-transparent"
+                                        : "bg-[#1e1e1e] text-[#ececec] border-[#333]"
                                 )}
                             >
+                                {m.role !== "user" && (
+                                    <div className="text-[10px] font-bold text-[#10a37f] uppercase tracking-wider mb-2 flex items-center gap-2">
+                                        <div className="w-1.5 h-1.5 bg-[#10a37f] rounded-full animate-pulse"></div>
+                                        Result Response:
+                                    </div>
+                                )}
                                 <div className="prose prose-invert max-w-none whitespace-pre-wrap leading-relaxed">
                                     {m.content}
                                 </div>
@@ -249,7 +255,7 @@ export default function ChatInterface() {
                 )}
                 <div className="text-center py-4 opacity-100">
                     <span className="text-[10px] text-white font-bold uppercase tracking-widest bg-red-600 px-3 py-1 rounded-full animate-pulse">
-                        LATEST BUILD: March 6, 2026 - 8:15 PM
+                        LATEST BUILD: March 6, 2026 - 8:30 PM
                     </span>
                 </div>
             </div>

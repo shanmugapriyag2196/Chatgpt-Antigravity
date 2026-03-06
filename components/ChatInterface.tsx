@@ -8,10 +8,10 @@ import { cn } from "@/lib/utils";
 export default function ChatInterface() {
     const { messages, input, setInput, handleInputChange, handleSubmit, append, isLoading, error } = useChat({
         api: '/api/engine',
-        onResponse: (response) => {
+        onResponse: (response: Response) => {
             console.log(">>>> [CLIENT] Response received:", response.status);
         },
-        onFinish: (message) => {
+        onFinish: (message: Message) => {
             console.log(">>>> [CLIENT] Stream finished:", message.content.substring(0, 50));
         },
         onError: (err: any) => {

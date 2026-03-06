@@ -8,7 +8,7 @@ export async function GET() {
     const key = process.env.OPENAI_API_KEY || "";
     const hint = key.length > 8 ? `${key.substring(0, 4)}...${key.substring(key.length - 4)}` : "INVALID_LENGTH";
     return new Response(JSON.stringify({
-        status: "Engine API Active v5",
+        status: "Engine API Active v6",
         keyLength: key.length,
         keyHint: hint,
         provider: "openai",
@@ -31,6 +31,18 @@ export async function POST(req: Request) {
             });
         }
 
+        // Mock Stream Test (Baseline)
+        if (body.test === "mock") {
+            console.log(`>>>> [ENGINE_MOCK:${requestId}] Delivering mock stream...`);
+            const mockStream = `0:"Server streaming is WORKING. This text is not from AI."\nd:{"finishReason":"stop"}\n`;
+            return new Response(mockStream, {
+                headers: {
+                    "Content-Type": "text/plain; charset=utf-8",
+                    "X-Vercel-AI-Data-Stream": "v1"
+                }
+            });
+        }
+
         // Deep Diagnostic (Non-streaming)
         if (body.test === "diagnostic") {
             const key = process.env.OPENAI_API_KEY;
@@ -38,11 +50,16 @@ export async function POST(req: Request) {
             const openai = createOpenAI({ apiKey: key });
             try {
                 console.log(`>>>> [ENGINE_DIAG:${requestId}] Testing generateText...`);
-                const { text } = await generateText({
+                const response = await generateText({
                     model: openai("gpt-4o-mini"),
-                    prompt: "Say 'Engine Verified'",
+                    prompt: "Write exactly 'AI_ACTIVE' and nothing else.",
                 });
-                return new Response(JSON.stringify({ success: true, text }), { headers: { "Content-Type": "application/json" } });
+                return new Response(JSON.stringify({
+                    success: true,
+                    text: response.text || "EMPTY_RESPONSE",
+                    finishReason: response.finishReason,
+                    usage: response.usage
+                }), { headers: { "Content-Type": "application/json" } });
             } catch (e: any) {
                 console.error(`>>>> [ENGINE_DIAG_ERR:${requestId}]`, e);
                 return new Response(JSON.stringify({ success: false, error: e.message }), {

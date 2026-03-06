@@ -73,7 +73,7 @@ export default function ChatInterface() {
                 aiStatus = `AI ERROR: ${e}`;
             }
 
-            alert(`ENGINE API DIAGNOSTICS (v7):\n\n1. GET: ${data.keyLength} chars (HINT: ${data.keyHint})\n2. POST PONG: ${pongStatus}\n3. MOCK STREAM: ${mockStatus}\n4. POST AI: ${aiStatus}\n\nNOTE: If keyHint starts with "sk-p" it is likely correct. If it starts with "OPEN", you pasted the wrong text into Vercel.`);
+            alert(`ENGINE API DIAGNOSTICS (v9):\n\n1. GET: ${data.keyLength} chars (HINT: ${data.keyHint})\n2. POST PONG: ${pongStatus}\n3. MOCK STREAM: ${mockStatus}\n4. POST AI: ${aiStatus}\n\nNOTE: If keyHint starts with "sk-p" it is likely correct. If it starts with "OPEN", you pasted the wrong text into Vercel.`);
         } catch (e) {
             alert(`Failed diagnostics: ${e}`);
         }
@@ -249,7 +249,7 @@ export default function ChatInterface() {
                 )}
                 <div className="text-center py-4 opacity-100">
                     <span className="text-[10px] text-white font-bold uppercase tracking-widest bg-red-600 px-3 py-1 rounded-full animate-pulse">
-                        LATEST BUILD: March 6, 2026 - 6:45 PM
+                        LATEST BUILD: March 6, 2026 - 7:30 PM
                     </span>
                 </div>
             </div>

@@ -41,7 +41,21 @@ export default function ChatInterface() {
                 pongStatus = `ERROR: ${e}`;
             }
 
-            // Test 3: REAL AI (POST)
+            // Test 3: MOCK STREAM (POST)
+            let mockStatus = "Checking...";
+            try {
+                const mockRes = await fetch('/api/engine', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ test: 'mock' })
+                });
+                const mockText = await mockRes.text();
+                mockStatus = mockRes.ok ? `SUCCESS (${mockText.length} bytes)` : `FAILED (${mockRes.status})`;
+            } catch (e) {
+                mockStatus = `MOCK ERROR: ${e}`;
+            }
+
+            // Test 4: REAL AI (POST)
             let aiStatus = "Checking...";
             try {
                 const aiRes = await fetch('/api/engine', {
@@ -50,7 +64,7 @@ export default function ChatInterface() {
                     body: JSON.stringify({ messages: [{ role: 'user', content: 'Say "Ready"' }] })
                 });
                 const aiText = await aiRes.text();
-                aiStatus = aiRes.ok ? `SUCCESS (${aiText.length} bytes)` : `FAILED (${aiRes.status}): ${aiText.substring(0, 100)}`;
+                aiStatus = aiRes.ok ? `SUCCESS (${aiText.length} bytes)` : `FAILED (${aiRes.status})`;
             } catch (e) {
                 aiStatus = `AI ERROR: ${e}`;
             }

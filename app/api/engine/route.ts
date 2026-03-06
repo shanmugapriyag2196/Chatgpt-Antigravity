@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export async function GET() {
     const key = process.env.OPENAI_API_KEY;
     return new Response(JSON.stringify({
-        status: "Engine API Active v2",
+        status: "Engine API Active v3",
         keyLength: key ? key.length : 0,
         provider: "openai",
         timestamp: new Date().toISOString()
@@ -27,6 +27,15 @@ export async function POST(req: Request) {
             return new Response(JSON.stringify({ message: "PONG_READY", id: requestId }), {
                 headers: { "Content-Type": "application/json" }
             });
+        }
+
+        // Mock Stream Test
+        if (body.test === "mock") {
+            console.log(`>>>> [ENGINE_MOCK:${requestId}] Delivering mock stream...`);
+            return new Response(
+                "0:\"This is a simulated AI response stream to test if the client can display text.\"\n",
+                { headers: { "Content-Type": "text/plain; charset=utf-8" } }
+            );
         }
 
         const { messages } = body;

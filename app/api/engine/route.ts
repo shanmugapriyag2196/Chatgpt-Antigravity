@@ -8,7 +8,7 @@ export async function GET() {
     const key = process.env.OPENAI_API_KEY || "";
     const hint = key.length > 8 ? `${key.substring(0, 4)}...${key.substring(key.length - 4)}` : "INVALID_LENGTH";
     return new Response(JSON.stringify({
-        status: "Engine API Active v9",
+        status: "Engine API Active v10",
         keyLength: key.length,
         keyHint: hint,
         provider: "openai",
@@ -55,32 +55,55 @@ export async function POST(req: Request) {
             });
         }
 
-        // 4. Deep Diagnostic (Non-streaming)
+        // 4. Super Diagnostic (Permission Check)
         if (body.test === "diagnostic") {
             if (!key) return new Response("Key Missing", { status: 500 });
+
             try {
-                console.log(`>>>> [ENGINE_DIAG:${requestId}] Testing generateText with gpt-4o...`);
+                console.log(`>>>> [ENGINE_DIAG:${requestId}] Checking OpenAI Permissions...`);
+                // Test 1: List Models
+                const listRes = await fetch("https://api.openai.com/v1/models", {
+                    headers: { "Authorization": `Bearer ${key}` }
+                });
+                const listData = await listRes.json();
+
+                if (!listRes.ok) {
+                    return new Response(JSON.stringify({
+                        success: false,
+                        error: `Auth Failed: ${JSON.stringify(listData.error)}`
+                    }), { status: 500 });
+                }
+
+                const modelNames = listData.data?.map((m: any) => m.id) || [];
+                const has4o = modelNames.includes("gpt-4o");
+                const has4oMini = modelNames.includes("gpt-4o-mini");
+
+                // Test 2: Generate with first available
+                const targetModel = has4o ? "gpt-4o" : (has4oMini ? "gpt-4o-mini" : modelNames[0]);
+
+                if (!targetModel) {
+                    return new Response(JSON.stringify({ success: false, error: "No models available for this key" }), { status: 500 });
+                }
+
                 const response = await generateText({
-                    model: openai("gpt-4o") as any,
-                    prompt: "Write exactly 'AI_ACTIVE' and nothing else.",
+                    model: openai(targetModel) as any,
+                    prompt: "Say 'SUPER_READY'",
                 });
 
                 return new Response(JSON.stringify({
                     success: true,
-                    text: response.text || "EMPTY_RESPONSE",
-                    finishReason: JSON.stringify(response.finishReason),
-                    usage: response.usage
+                    text: response.text || "EMPTY",
+                    modelUsed: targetModel,
+                    available: modelNames.slice(0, 10),
+                    hasStandardModels: has4o || has4oMini
                 }), { headers: { "Content-Type": "application/json" } });
+
             } catch (e: any) {
-                console.error(`>>>> [ENGINE_DIAG_ERR:${requestId}]`, e);
                 return new Response(JSON.stringify({
                     success: false,
                     error: e.message,
-                    fullError: JSON.stringify(e, Object.getOwnPropertyNames(e))
-                }), {
-                    status: 500,
-                    headers: { "Content-Type": "application/json" }
-                });
+                    full: JSON.stringify(e, Object.getOwnPropertyNames(e))
+                }), { status: 500, headers: { "Content-Type": "application/json" } });
             }
         }
 

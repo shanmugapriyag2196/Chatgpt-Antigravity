@@ -61,10 +61,14 @@ export default function ChatInterface() {
                 const aiRes = await fetch('/api/engine', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ messages: [{ role: 'user', content: 'Say "Ready"' }] })
+                    body: JSON.stringify({ test: 'diagnostic' })
                 });
-                const aiText = await aiRes.text();
-                aiStatus = aiRes.ok ? `SUCCESS (${aiText.length} bytes)` : `FAILED (${aiRes.status})`;
+                const aiData = await aiRes.json();
+                if (aiData.success) {
+                    aiStatus = `SUCCESS (${aiData.text})`;
+                } else {
+                    aiStatus = `FAILED: ${aiData.error}`;
+                }
             } catch (e) {
                 aiStatus = `AI ERROR: ${e}`;
             }
@@ -245,7 +249,7 @@ export default function ChatInterface() {
                 )}
                 <div className="text-center py-4 opacity-100">
                     <span className="text-[10px] text-white font-bold uppercase tracking-widest bg-red-600 px-3 py-1 rounded-full animate-pulse">
-                        LATEST BUILD: March 6, 2026 - 5:15 PM
+                        LATEST BUILD: March 6, 2026 - 6:00 PM
                     </span>
                 </div>
             </div>

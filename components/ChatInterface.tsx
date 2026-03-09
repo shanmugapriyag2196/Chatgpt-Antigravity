@@ -4,16 +4,13 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import {
     Send,
     Plus,
-    Search,
-    Image as ImageIcon,
-    LayoutGrid,
-    Code2,
     PlusCircle,
     Mic,
     MoreHorizontal,
     CircleUser,
     Settings,
-    FileUp
+    FileUp,
+    Paperclip
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +18,8 @@ interface Message {
     id: string;
     role: "user" | "assistant" | "system";
     content: string;
+    isUpload?: boolean;
+    fileName?: string;
 }
 
 interface ChatHistory {
@@ -44,7 +43,7 @@ export default function ChatInterface() {
 
     // --- Persistence (History) ---
     useEffect(() => {
-        const saved = localStorage.getItem("chat_v24_history");
+        const saved = localStorage.getItem("chat_v25_history");
         if (saved) {
             try {
                 const parsed = JSON.parse(saved);
@@ -57,7 +56,7 @@ export default function ChatInterface() {
 
     const saveHistory = useCallback((updatedChats: ChatHistory[]) => {
         setChats(updatedChats);
-        localStorage.setItem("chat_v24_history", JSON.stringify(updatedChats));
+        localStorage.setItem("chat_v25_history", JSON.stringify(updatedChats));
     }, []);
 
     // --- Scroll Control ---
@@ -81,7 +80,15 @@ export default function ChatInterface() {
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            alert(`File Selected: ${file.name}. (Upload integration in progress)`);
+            // Display upload in dashboard
+            const uploadMsg: Message = {
+                id: Math.random().toString(36).substring(7),
+                role: "user",
+                content: `Attached file: ${file.name}`,
+                isUpload: true,
+                fileName: file.name
+            };
+            setMessages(prev => [...prev, uploadMsg]);
         }
     };
 
@@ -100,7 +107,6 @@ export default function ChatInterface() {
         setInput("");
         setIsLoading(true);
 
-        // Assistant placeholder
         const assistantId = Math.random().toString(36).substring(7);
         const assistantMsg: Message = { id: assistantId, role: "assistant", content: "" };
         setMessages([...updatedMessages, assistantMsg]);
@@ -128,8 +134,7 @@ export default function ChatInterface() {
                         if (line.startsWith('0:')) {
                             try {
                                 const text = JSON.parse(line.substring(2));
-                                // Filter out diagnostics from v23 backend
-                                if (!text.includes("[HANDSHAKE") && !text.includes("ACTIVE]") && !text.includes("VERIFIER")) {
+                                if (!text.includes("[HANDSHAKE") && !text.includes("ACTIVE]") && !text.includes("FORGE") && !text.includes("VERIFIER")) {
                                     fullAssistantContent += text;
                                     setMessages(prev => {
                                         const next = [...prev];
@@ -175,73 +180,34 @@ export default function ChatInterface() {
 
     return (
         <div className="flex h-screen w-full bg-white text-[#0d0d0d] font-sans selection:bg-[#10a37f]/20">
-            {/* --- Sidebar --- */}
+            {/* --- Sidebar (Refined v25) --- */}
             <aside className="w-[260px] bg-[#f9f9f9] border-r border-[#e5e5e5] flex flex-col p-3 overflow-hidden">
                 {/* Top Action */}
                 <button
                     onClick={startNewChat}
-                    className="flex items-center justify-between w-full p-3 h-10 hover:bg-[#ececec] rounded-lg transition-colors group mb-6"
+                    className="flex items-center justify-between w-full p-3 h-12 hover:bg-[#ececec] rounded-xl transition-colors group mb-4"
                 >
                     <div className="flex items-center gap-3">
-                        <div className="w-5 h-5 flex items-center justify-center">
-                            <PlusCircle className="w-5 h-5 text-[#0d0d0d]" />
-                        </div>
-                        <span className="text-[14px] font-medium text-[#0d0d0d]">New chat</span>
-                    </div>
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                        <LayoutGrid className="w-4 h-4 text-zinc-400" />
+                        <PlusCircle className="w-5 h-5 text-[#0d0d0d]" />
+                        <span className="text-[14px] font-semibold text-[#0d0d0d]">New chat</span>
                     </div>
                 </button>
 
-                {/* Secondary Icons */}
-                <div className="flex flex-col gap-1 mb-8">
-                    {[
-                        { icon: Search, label: "Search chats" },
-                        { icon: ImageIcon, label: "Images" },
-                        { icon: LayoutGrid, label: "Apps" },
-                        { icon: Code2, label: "Codex" }
-                    ].map((item, idx) => (
-                        <button key={idx} className="flex items-center gap-3 w-full p-3 hover:bg-[#ececec] rounded-lg transition-colors">
-                            <item.icon className="w-4 h-4 text-[#424242]" />
-                            <span className="text-[14px] font-normal text-[#0d0d0d]">{item.label}</span>
-                        </button>
-                    ))}
-                </div>
-
-                {/* GPTs Section */}
-                <div className="flex-1 overflow-y-auto">
-                    <div className="px-3 mb-2">
-                        <span className="text-[11px] font-semibold text-[#8e8e93] uppercase tracking-wider">GPTs</span>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                        {[
-                            { title: "Standardized Meeting Temp...", img: "📄" },
-                            { title: "Prompt Engineer", img: "⚡" },
-                            { title: "Python", img: "🐍" },
-                            { title: "THOR Log File Reviewer", img: "📊" },
-                            { title: "Explore GPTs", img: "🧩" }
-                        ].map((gpt, idx) => (
-                            <button key={idx} className="flex items-center gap-3 w-full p-3 hover:bg-[#ececec] rounded-lg transition-colors text-left">
-                                <span className="w-5 h-5 flex items-center justify-center text-[12px]">{gpt.img}</span>
-                                <span className="text-[13px] font-normal text-[#0d0d0d] truncate">{gpt.title}</span>
-                            </button>
-                        ))}
-                    </div>
-
-                    {/* Chat History List */}
+                {/* Chat History List (No Dummy Groups) */}
+                <div className="flex-1 overflow-y-auto mt-2">
                     {chats.length > 0 && (
-                        <div className="mt-8">
-                            <div className="px-3 mb-2">
-                                <span className="text-[11px] font-semibold text-[#8e8e93] uppercase tracking-wider">Recent</span>
+                        <div className="space-y-4">
+                            <div className="px-3">
+                                <span className="text-[11px] font-bold text-[#8e8e93] uppercase tracking-widest">Recent history</span>
                             </div>
-                            <div className="flex flex-col gap-1">
+                            <div className="flex flex-col gap-0.5 px-1">
                                 {chats.map(chat => (
                                     <button
                                         key={chat.id}
                                         onClick={() => loadChat(chat)}
                                         className={cn(
-                                            "w-full text-left p-2.5 rounded-lg text-[13px] hover:bg-[#ececec] truncate transition-colors",
-                                            currentChatId === chat.id ? "bg-[#ececec]" : "text-[#424242]"
+                                            "w-full text-left p-3 rounded-lg text-[13px] hover:bg-[#ececec] truncate transition-all",
+                                            currentChatId === chat.id ? "bg-[#ececec] font-medium" : "text-[#424242]"
                                         )}
                                     >
                                         {chat.title}
@@ -252,105 +218,121 @@ export default function ChatInterface() {
                     )}
                 </div>
 
-                {/* Footer / User Profile */}
-                <div className="mt-auto border-t border-[#e5e5e5] pt-3">
+                {/* Footer (Profile Only) */}
+                <div className="mt-auto border-t border-[#e5e5e5] pt-4 pb-2">
                     <button
                         onClick={() => setShowSettings(!showSettings)}
-                        className="flex items-center gap-3 w-full p-3 hover:bg-[#ececec] rounded-lg transition-colors relative"
+                        className="flex items-center gap-3 w-full p-3 hover:bg-[#ececec] rounded-xl transition-colors relative"
                     >
-                        <div className="w-8 h-8 rounded-full bg-[#e5e5e5] flex items-center justify-center text-[#9b9b9b] font-bold text-[10px]">
+                        <div className="w-8 h-8 rounded-full bg-[#10a37f] flex items-center justify-center text-white font-black text-[10px] shadow-sm">
                             SP
                         </div>
                         <div className="flex flex-col items-start overflow-hidden">
-                            <span className="text-[14px] font-medium text-[#0d0d0d] truncate">Shanmuga Priya</span>
-                            <span className="text-[12px] text-[#8e8e93]">Free</span>
+                            <span className="text-[14px] font-bold text-[#0d0d0d] truncate">Shanmuga Priya</span>
+                            <span className="text-[12px] text-[#8e8e93]">Free account</span>
                         </div>
                     </button>
-                    <button className="flex items-center gap-3 w-full p-3 h-10 hover:bg-[#ececec] rounded-lg transition-colors mt-2">
-                        <LayoutGrid className="w-4 h-4 text-[#424242]" />
-                        <span className="text-[13px] font-medium text-[#0d0d0d]">Claim offer</span>
-                    </button>
+
+                    {/* Settings Flyout */}
+                    {showSettings && (
+                        <div className="absolute bottom-[84px] left-3 w-[236px] bg-white border border-[#e5e5e5] rounded-2xl shadow-2xl z-50 p-3 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                            <div className="flex items-center gap-3 mb-3 p-2">
+                                <div className="w-10 h-10 rounded-full bg-[#f0f0f0] flex items-center justify-center text-zinc-400 font-bold">SP</div>
+                                <div className="flex flex-col">
+                                    <span className="text-[14px] font-bold text-[#0d0d0d]">Shanmuga Priya</span>
+                                    <span className="text-[11px] text-zinc-400 truncate">Settings & Profile</span>
+                                </div>
+                            </div>
+                            <button className="flex items-center gap-3 w-full p-2.5 hover:bg-[#f9f9f9] rounded-lg transition-colors text-[13px]">
+                                <Settings className="w-4 h-4 text-zinc-500" /> <span>Settings</span>
+                            </button>
+                        </div>
+                    )}
                 </div>
             </aside>
 
             {/* --- Main Chat --- */}
             <main className="flex-1 flex flex-col relative bg-white">
-                {/* Top Nav */}
-                <header className="h-14 flex items-center px-6 justify-between border-b border-[#f0f0f0]">
-                    <div className="flex items-center gap-1 group cursor-pointer">
-                        <span className="text-[18px] font-semibold text-[#424242]">ChatGPT</span>
-                        <MoreHorizontal className="w-4 h-4 text-zinc-400" />
-                    </div>
-                    <div className="flex items-center gap-4">
-                        <div className="bg-[#f0f2ff] px-3 py-1 rounded-full flex items-center gap-2">
-                            <div className="w-2 h-2 bg-[#708dff] rounded-full"></div>
-                            <span className="text-[12px] font-medium text-[#708dff]">Free offer</span>
-                        </div>
-                        <CircleUser className="w-6 h-6 text-zinc-300" />
+                {/* Top Nav (Clean v25) */}
+                <header className="h-14 flex items-center px-6 justify-between">
+                    <div className="flex items-center gap-2 group cursor-pointer opacity-80 hover:opacity-100 transition-opacity">
+                        <span className="text-[16px] font-bold text-[#424242]">ChatGPT</span>
+                        <MoreHorizontal className="w-4 h-4 text-zinc-300" />
                     </div>
                 </header>
 
                 {/* Messages Container */}
-                <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 md:px-0">
+                <div ref={scrollRef} className="flex-1 overflow-y-auto w-full">
                     {messages.length === 0 ? (
-                        <div className="h-full flex flex-col items-center justify-center">
-                            <h1 className="text-[28px] font-semibold text-[#0d0d0d] mb-8">What are you working on?</h1>
+                        <div className="h-full flex flex-col items-center justify-center -mt-20">
+                            <h1 className="text-[32px] font-bold text-[#0d0d0d] mb-12 tracking-tight">What are you working on?</h1>
                         </div>
                     ) : (
-                        <div className="max-w-[760px] mx-auto py-10 space-y-10">
+                        <div className="max-w-[720px] mx-auto py-12 space-y-12">
                             {messages.map((m) => (
-                                <div key={m.id} className="flex gap-4 group">
+                                <div key={m.id} className="flex gap-5 group">
                                     <div className={cn(
-                                        "w-8 h-8 rounded-full flex items-center justify-center text-[14px]",
-                                        m.role === "user" ? "bg-zinc-100 text-zinc-500" : "bg-[#10a37f] text-white"
+                                        "w-8 h-8 rounded-full flex items-center justify-center text-[13px] border shrink-0",
+                                        m.role === "user" ? "bg-white border-zinc-200 text-zinc-400" : "bg-[#10a37f] border-[#10a37f] text-white"
                                     )}>
-                                        {m.role === "user" ? "U" : "A"}
+                                        {m.role === "user" ? "SP" : "AI"}
                                     </div>
                                     <div className="flex-1 pt-1">
-                                        <div className="text-[16px] leading-[1.6] text-[#2c2c2c] whitespace-pre-wrap">
-                                            {m.content}
-                                        </div>
+                                        {m.isUpload ? (
+                                            <div className="bg-[#f4f4f4] border border-[#e5e5e5] rounded-2xl p-4 flex items-center gap-3 w-fit">
+                                                <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center border border-zinc-200">
+                                                    <FileUp className="w-5 h-5 text-[#10a37f]" />
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <span className="text-[13px] font-semibold text-[#0d0d0d]">{m.fileName}</span>
+                                                    <span className="text-[11px] text-[#8e8e93]">Ready for analysis</span>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="text-[16px] leading-[1.7] text-[#0d0d0d] whitespace-pre-wrap font-regular">
+                                                {m.content}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             ))}
                             {isLoading && (
-                                <div className="flex gap-4 animate-pulse">
-                                    <div className="w-8 h-8 rounded-full bg-[#10a37f]/50"></div>
-                                    <div className="flex-1 bg-zinc-100 h-6 rounded w-[400px]"></div>
+                                <div className="flex gap-5">
+                                    <div className="w-8 h-8 rounded-full bg-[#10a37f] flex items-center justify-center text-white text-[11px] animate-pulse">AI</div>
+                                    <div className="flex-1 space-y-2 pt-3">
+                                        <div className="h-4 bg-zinc-100 rounded w-full animate-pulse"></div>
+                                        <div className="h-4 bg-zinc-100 rounded w-[80%] animate-pulse"></div>
+                                    </div>
                                 </div>
                             )}
                         </div>
                     )}
                 </div>
 
-                {/* Settings Overlay (User Info) */}
-                {showSettings && (
-                    <div className="absolute bottom-[80px] left-6 w-[280px] bg-white border border-[#e5e5e5] rounded-2xl shadow-2xl z-50 p-4 animation-slide-up">
-                        <div className="flex items-center gap-4 mb-4 pb-4 border-b border-[#f0f0f0]">
-                            <div className="w-10 h-10 rounded-full bg-[#f0f0f0] flex items-center justify-center text-zinc-400 font-bold">SP</div>
-                            <div className="flex flex-col">
-                                <span className="text-[15px] font-bold text-[#0d0d0d]">Shanmuga Priya</span>
-                                <span className="text-[12px] text-zinc-400 truncate">priyag@example.com</span>
-                            </div>
-                        </div>
-                        <button className="flex items-center gap-3 w-full p-2.5 hover:bg-[#f9f9f9] rounded-lg transition-colors text-[14px]">
-                            <Settings className="w-4 h-4" /> <span>Settings</span>
-                        </button>
-                    </div>
-                )}
-
-                {/* Input Area */}
-                <div className="pb-10 pt-2 bg-gradient-to-t from-white via-white to-transparent">
-                    <div className="max-w-[760px] mx-auto relative px-4 md:px-0">
+                {/* Input Area (Clean v25) */}
+                <div className="pb-10 pt-4 bg-white">
+                    <div className="max-w-[760px] mx-auto relative px-4">
                         <form onSubmit={handleSubmit} className="relative group">
-                            <div className="flex items-center w-full min-h-[52px] bg-[#f4f4f4] rounded-[26px] pr-3 pl-1 shadow-sm border border-transparent focus-within:border-[#e5e5e5] transition-all overflow-hidden">
-                                {/* Upload Icon (+) */}
+                            <div className="flex items-center w-full min-h-[56px] bg-[#f4f4f4] rounded-[28px] pr-3 pl-2 border border-transparent focus-within:ring-1 focus-within:ring-[#e5e5e5] transition-all">
+
+                                {/* Plus (+) Trigger */}
                                 <button
                                     type="button"
-                                    onClick={handleUploadClick}
+                                    onClick={startNewChat}
+                                    title="New Chat"
                                     className="w-10 h-10 flex items-center justify-center text-zinc-400 hover:text-[#0d0d0d] transition-colors rounded-full"
                                 >
                                     <Plus className="w-5 h-5" />
+                                </button>
+
+                                {/* Upload (Paperclip) */}
+                                <button
+                                    type="button"
+                                    onClick={handleUploadClick}
+                                    title="Upload File"
+                                    className="w-10 h-10 flex items-center justify-center text-zinc-400 hover:text-[#0d0d0d] transition-colors rounded-full"
+                                >
+                                    <Paperclip className="w-5 h-5" />
                                 </button>
 
                                 <textarea
@@ -363,19 +345,19 @@ export default function ChatInterface() {
                                         }
                                     }}
                                     placeholder="Ask anything"
-                                    className="flex-1 bg-transparent border-none focus:ring-0 resize-none py-4 px-2 text-[16px] text-[#0d0d0d] placeholder-zinc-400"
+                                    className="flex-1 bg-transparent border-none focus:ring-0 resize-none py-4 px-2 text-[16px] text-[#0d0d0d] placeholder-zinc-500"
                                     rows={1}
                                 />
 
                                 <div className="flex items-center gap-1">
-                                    <button type="button" className="w-8 h-8 flex items-center justify-center text-zinc-400 hover:text-[#0d0d0d]">
+                                    <button type="button" className="w-9 h-9 flex items-center justify-center text-zinc-400 hover:text-[#0d0d0d]">
                                         <Mic className="w-5 h-5" />
                                     </button>
                                     <button
                                         type="submit"
                                         disabled={!input.trim() || isLoading}
                                         className={cn(
-                                            "w-8 h-8 flex items-center justify-center rounded-full transition-all",
+                                            "w-9 h-9 flex items-center justify-center rounded-full transition-all",
                                             input.trim() ? "bg-[#0d0d0d] text-white" : "bg-[#e5e5e5] text-white cursor-not-allowed"
                                         )}
                                     >
@@ -384,7 +366,7 @@ export default function ChatInterface() {
                                 </div>
                             </div>
                         </form>
-                        <p className="text-center text-[12px] text-zinc-400 mt-4 px-10">
+                        <p className="text-center text-[12px] text-zinc-400 mt-4 font-medium opacity-60">
                             ChatGPT can make mistakes. Check important info.
                         </p>
                     </div>

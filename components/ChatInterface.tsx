@@ -10,7 +10,8 @@ import {
     CircleUser,
     Settings,
     FileUp,
-    Paperclip
+    Paperclip,
+    Loader2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -36,6 +37,7 @@ export default function ChatInterface() {
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
 
     const scrollRef = useRef<HTMLDivElement>(null);
@@ -43,7 +45,7 @@ export default function ChatInterface() {
 
     // --- Persistence (History) ---
     useEffect(() => {
-        const saved = localStorage.getItem("chat_v25_history");
+        const saved = localStorage.getItem("chat_v27_history");
         if (saved) {
             try {
                 const parsed = JSON.parse(saved);
@@ -56,7 +58,7 @@ export default function ChatInterface() {
 
     const saveHistory = useCallback((updatedChats: ChatHistory[]) => {
         setChats(updatedChats);
-        localStorage.setItem("chat_v25_history", JSON.stringify(updatedChats));
+        localStorage.setItem("chat_v27_history", JSON.stringify(updatedChats));
     }, []);
 
     // --- Scroll Control ---
@@ -80,21 +82,95 @@ export default function ChatInterface() {
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            // Display upload in dashboard
-            const uploadMsg: Message = {
-                id: Math.random().toString(36).substring(7),
-                role: "user",
-                content: `Attached file: ${file.name}`,
-                isUpload: true,
-                fileName: file.name
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const content = event.target?.result as string;
+                // Add upload bubble
+                const uploadMsg: Message = {
+                    id: Math.random().toString(36).substring(7),
+                    role: "user",
+                    content: `[FILE UPLOADED: ${file.name}]\\n\\nPlease transform this resume into the Value Global Standard Format.`,
+                    isUpload: true,
+                    fileName: file.name
+                };
+                setMessages(prev => [...prev, uploadMsg]);
+                // Automatically submit for transformation
+                triggerTransformation(content, file.name);
             };
-            setMessages(prev => [...prev, uploadMsg]);
+            reader.readAsText(file);
         }
     };
 
-    const loadChat = (chat: ChatHistory) => {
-        setCurrentChatId(chat.id);
-        setMessages(chat.messages);
+    const triggerTransformation = async (fileContent: string, fileName: string) => {
+        setIsAnalyzing(true);
+        setIsLoading(true);
+
+        const assistantId = Math.random().toString(36).substring(7);
+        const assistantMsg: Message = { id: assistantId, role: "assistant", content: "" };
+        setMessages(prev => [...prev, assistantMsg]);
+
+        try {
+            const response = await fetch('/api/engine', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    messages: [
+                        { role: "user", content: `Here is the resume content for ${fileName}:\\n\\n${fileContent}\\n\\nPlease format it according to Value Global standards.` }
+                    ]
+                })
+            });
+
+            const reader = response.body?.getReader();
+            const decoder = new TextDecoder();
+            let fullAssistantContent = "";
+
+            if (reader) {
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split("\n");
+
+                    for (const line of lines) {
+                        if (line.startsWith('0:')) {
+                            try {
+                                const text = JSON.parse(line.substring(2));
+                                if (!text.includes("[HANDSHAKE") && !text.includes("ACTIVE]") && !text.includes("FORGE") && !text.includes("VERIFIER")) {
+                                    fullAssistantContent += text;
+                                    setMessages(prev => {
+                                        const next = [...prev];
+                                        const last = next[next.length - 1];
+                                        if (last && last.id === assistantId) {
+                                            last.content = fullAssistantContent;
+                                        }
+                                        return next;
+                                    });
+                                }
+                            } catch (e) { }
+                        }
+                    }
+                }
+            }
+
+            // Auto-save history after successful transformation
+            const finalAssistantMsg: Message = { id: assistantId, role: "assistant", content: fullAssistantContent };
+            const newId = Math.random().toString(36).substring(7);
+            const newChat: ChatHistory = {
+                id: newId,
+                title: `Resume: ${fileName}`,
+                messages: [...messages, finalAssistantMsg],
+                timestamp: Date.now()
+            };
+            saveHistory([newChat, ...chats]);
+            setCurrentChatId(newId);
+
+        } catch (err) {
+            console.error("Transformation Error", err);
+        } finally {
+            setIsLoading(false);
+            setIsAnalyzing(false);
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -108,8 +184,7 @@ export default function ChatInterface() {
         setIsLoading(true);
 
         const assistantId = Math.random().toString(36).substring(7);
-        const assistantMsg: Message = { id: assistantId, role: "assistant", content: "" };
-        setMessages([...updatedMessages, assistantMsg]);
+        setMessages([...updatedMessages, { id: assistantId, role: "assistant", content: "" }]);
 
         try {
             const response = await fetch('/api/engine', {
@@ -151,19 +226,19 @@ export default function ChatInterface() {
                 }
             }
 
-            // Save to history
+            // Save history
             const finalAssistantMsg: Message = { id: assistantId, role: "assistant", content: fullAssistantContent };
-            const finalMessages = [...updatedMessages, finalAssistantMsg];
+            const finalHistory = [...updatedMessages, finalAssistantMsg];
 
             let updatedChats: ChatHistory[];
             if (currentChatId) {
-                updatedChats = chats.map(c => c.id === currentChatId ? { ...c, messages: finalMessages } : c);
+                updatedChats = chats.map(c => c.id === currentChatId ? { ...c, messages: finalHistory } : c);
             } else {
                 const newId = Math.random().toString(36).substring(7);
                 const newChat: ChatHistory = {
                     id: newId,
                     title: userMsg.content.slice(0, 30) + "...",
-                    messages: finalMessages,
+                    messages: finalHistory,
                     timestamp: Date.now()
                 };
                 updatedChats = [newChat, ...chats];
@@ -180,9 +255,8 @@ export default function ChatInterface() {
 
     return (
         <div className="flex h-screen w-full bg-white text-[#0d0d0d] font-sans selection:bg-[#10a37f]/20">
-            {/* --- Sidebar (Refined v25) --- */}
+            {/* --- Sidebar (Refined v27) --- */}
             <aside className="w-[260px] bg-[#f9f9f9] border-r border-[#e5e5e5] flex flex-col p-3 overflow-hidden">
-                {/* Top Action */}
                 <button
                     onClick={startNewChat}
                     className="flex items-center justify-between w-full p-3 h-12 hover:bg-[#ececec] rounded-xl transition-colors group mb-4"
@@ -193,7 +267,6 @@ export default function ChatInterface() {
                     </div>
                 </button>
 
-                {/* Chat History List (No Dummy Groups) */}
                 <div className="flex-1 overflow-y-auto mt-2">
                     {chats.length > 0 && (
                         <div className="space-y-4">
@@ -204,7 +277,7 @@ export default function ChatInterface() {
                                 {chats.map(chat => (
                                     <button
                                         key={chat.id}
-                                        onClick={() => loadChat(chat)}
+                                        onClick={() => { setCurrentChatId(chat.id); setMessages(chat.messages); }}
                                         className={cn(
                                             "w-full text-left p-3 rounded-lg text-[13px] hover:bg-[#ececec] truncate transition-all",
                                             currentChatId === chat.id ? "bg-[#ececec] font-medium" : "text-[#424242]"
@@ -218,7 +291,6 @@ export default function ChatInterface() {
                     )}
                 </div>
 
-                {/* Footer (Profile Only) */}
                 <div className="mt-auto border-t border-[#e5e5e5] pt-4 pb-2">
                     <button
                         onClick={() => setShowSettings(!showSettings)}
@@ -233,7 +305,6 @@ export default function ChatInterface() {
                         </div>
                     </button>
 
-                    {/* Settings Flyout */}
                     {showSettings && (
                         <div className="absolute bottom-[84px] left-3 w-[236px] bg-white border border-[#e5e5e5] rounded-2xl shadow-2xl z-50 p-3 animate-in fade-in slide-in-from-bottom-2 duration-200">
                             <div className="flex items-center gap-3 mb-3 p-2">
@@ -253,55 +324,60 @@ export default function ChatInterface() {
 
             {/* --- Main Chat --- */}
             <main className="flex-1 flex flex-col relative bg-white">
-                {/* Top Nav (Clean v25) */}
-                <header className="h-14 flex items-center px-6 justify-between">
+                <header className="h-14 flex items-center px-6 justify-between border-b border-[#f9f9f9]/10">
                     <div className="flex items-center gap-2 group cursor-pointer opacity-80 hover:opacity-100 transition-opacity">
                         <span className="text-[16px] font-bold text-[#424242]">ChatGPT</span>
                         <MoreHorizontal className="w-4 h-4 text-zinc-300" />
                     </div>
                 </header>
 
-                {/* Messages Container */}
                 <div ref={scrollRef} className="flex-1 overflow-y-auto w-full">
                     {messages.length === 0 ? (
                         <div className="h-full flex flex-col items-center justify-center -mt-20">
                             <h1 className="text-[32px] font-bold text-[#0d0d0d] mb-12 tracking-tight">What are you working on?</h1>
+                            {isAnalyzing && (
+                                <div className="flex flex-col items-center gap-4 animate-in fade-in zoom-in-95 duration-700">
+                                    <Loader2 className="w-12 h-12 text-[#10a37f] animate-spin" />
+                                    <span className="text-[14px] font-bold text-[#10a37f] uppercase tracking-widest animate-pulse">Forging Standard Resume...</span>
+                                </div>
+                            )}
                         </div>
                     ) : (
                         <div className="max-w-[720px] mx-auto py-12 space-y-12">
                             {messages.map((m) => (
-                                <div key={m.id} className="flex gap-5 group">
+                                <div key={m.id} className="flex gap-5 group animate-in slide-in-from-bottom-4 duration-500">
                                     <div className={cn(
-                                        "w-8 h-8 rounded-full flex items-center justify-center text-[13px] border shrink-0",
+                                        "w-8 h-8 rounded-full flex items-center justify-center text-[13px] border shrink-0 shadow-sm",
                                         m.role === "user" ? "bg-white border-zinc-200 text-zinc-400" : "bg-[#10a37f] border-[#10a37f] text-white"
                                     )}>
                                         {m.role === "user" ? "SP" : "AI"}
                                     </div>
                                     <div className="flex-1 pt-1">
                                         {m.isUpload ? (
-                                            <div className="bg-[#f4f4f4] border border-[#e5e5e5] rounded-2xl p-4 flex items-center gap-3 w-fit">
-                                                <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center border border-zinc-200">
-                                                    <FileUp className="w-5 h-5 text-[#10a37f]" />
+                                            <div className="bg-[#f9f9f9] border border-[#e5e5e5] rounded-3xl p-6 flex items-center gap-5 w-fit shadow-sm relative overflow-hidden group/upload">
+                                                <div className="absolute inset-0 bg-gradient-to-r from-[#10a37f]/5 to-transparent opacity-0 group-hover/upload:opacity-100 transition-opacity duration-700"></div>
+                                                <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center border border-zinc-100 shadow-sm relative">
+                                                    <FileUp className="w-6 h-6 text-[#10a37f]" />
                                                 </div>
-                                                <div className="flex flex-col">
-                                                    <span className="text-[13px] font-semibold text-[#0d0d0d]">{m.fileName}</span>
-                                                    <span className="text-[11px] text-[#8e8e93]">Ready for analysis</span>
+                                                <div className="flex flex-col relative">
+                                                    <span className="text-[14px] font-bold text-[#0d0d0d]">{m.fileName}</span>
+                                                    <span className="text-[11px] text-[#10a37f] font-bold uppercase tracking-wider">Transformer Active</span>
                                                 </div>
                                             </div>
                                         ) : (
-                                            <div className="text-[16px] leading-[1.7] text-[#0d0d0d] whitespace-pre-wrap font-regular">
+                                            <div className="text-[16px] leading-[1.8] text-[#0d0d0d] whitespace-pre-wrap font-regular markdown-custom">
                                                 {m.content}
                                             </div>
                                         )}
                                     </div>
                                 </div>
                             ))}
-                            {isLoading && (
-                                <div className="flex gap-5">
-                                    <div className="w-8 h-8 rounded-full bg-[#10a37f] flex items-center justify-center text-white text-[11px] animate-pulse">AI</div>
-                                    <div className="flex-1 space-y-2 pt-3">
-                                        <div className="h-4 bg-zinc-100 rounded w-full animate-pulse"></div>
-                                        <div className="h-4 bg-zinc-100 rounded w-[80%] animate-pulse"></div>
+                            {isLoading && !isAnalyzing && (
+                                <div className="flex gap-5 animate-pulse">
+                                    <div className="w-8 h-8 rounded-full bg-[#10a37f]/80 flex items-center justify-center text-white text-[11px]">AI</div>
+                                    <div className="flex-1 pt-3 space-y-3">
+                                        <div className="h-4 bg-zinc-100 rounded-full w-[90%]"></div>
+                                        <div className="h-4 bg-zinc-100 rounded-full w-[70%]"></div>
                                     </div>
                                 </div>
                             )}
@@ -309,28 +385,24 @@ export default function ChatInterface() {
                     )}
                 </div>
 
-                {/* Input Area (Clean v25) */}
                 <div className="pb-10 pt-4 bg-white">
                     <div className="max-w-[760px] mx-auto relative px-4">
                         <form onSubmit={handleSubmit} className="relative group">
-                            <div className="flex items-center w-full min-h-[56px] bg-[#f4f4f4] rounded-[28px] pr-3 pl-2 border border-transparent focus-within:ring-1 focus-within:ring-[#e5e5e5] transition-all">
-
-                                {/* Plus (+) Trigger */}
+                            <div className="flex items-center w-full min-h-[60px] bg-[#f4f4f4] rounded-[30px] pr-4 pl-3 border border-transparent focus-within:ring-2 focus-within:ring-[#10a37f]/10 focus-within:border-[#e5e5e5] transition-all duration-300">
                                 <button
                                     type="button"
                                     onClick={startNewChat}
                                     title="New Chat"
-                                    className="w-10 h-10 flex items-center justify-center text-zinc-400 hover:text-[#0d0d0d] transition-colors rounded-full"
+                                    className="w-10 h-10 flex items-center justify-center text-zinc-400 hover:text-[#0d0d0d] hover:bg-white rounded-full transition-all"
                                 >
                                     <Plus className="w-5 h-5" />
                                 </button>
 
-                                {/* Upload (Paperclip) */}
                                 <button
                                     type="button"
                                     onClick={handleUploadClick}
-                                    title="Upload File"
-                                    className="w-10 h-10 flex items-center justify-center text-zinc-400 hover:text-[#0d0d0d] transition-colors rounded-full"
+                                    title="Upload & Transform Resume"
+                                    className="w-10 h-10 flex items-center justify-center text-zinc-400 hover:text-[#10a37f] hover:bg-white rounded-full transition-all"
                                 >
                                     <Paperclip className="w-5 h-5" />
                                 </button>
@@ -344,21 +416,21 @@ export default function ChatInterface() {
                                             handleSubmit(e);
                                         }
                                     }}
-                                    placeholder="Ask anything"
-                                    className="flex-1 bg-transparent border-none focus:ring-0 resize-none py-4 px-2 text-[16px] text-[#0d0d0d] placeholder-zinc-500"
+                                    placeholder="Ask anything or Upload Resume..."
+                                    className="flex-1 bg-transparent border-none focus:ring-0 resize-none py-4 px-3 text-[16px] text-[#0d0d0d] placeholder-zinc-500 font-medium"
                                     rows={1}
                                 />
 
-                                <div className="flex items-center gap-1">
-                                    <button type="button" className="w-9 h-9 flex items-center justify-center text-zinc-400 hover:text-[#0d0d0d]">
+                                <div className="flex items-center gap-2">
+                                    <button type="button" className="w-9 h-9 flex items-center justify-center text-zinc-400 hover:text-[#0d0d0d] rounded-full transition-colors">
                                         <Mic className="w-5 h-5" />
                                     </button>
                                     <button
                                         type="submit"
                                         disabled={!input.trim() || isLoading}
                                         className={cn(
-                                            "w-9 h-9 flex items-center justify-center rounded-full transition-all",
-                                            input.trim() ? "bg-[#0d0d0d] text-white" : "bg-[#e5e5e5] text-white cursor-not-allowed"
+                                            "w-10 h-10 flex items-center justify-center rounded-full transition-all shadow-md",
+                                            input.trim() ? "bg-[#0d0d0d] text-white hover:bg-[#10a37f]" : "bg-[#e5e5e5] text-white cursor-not-allowed"
                                         )}
                                     >
                                         <Send className="w-4 h-4" />
@@ -366,20 +438,53 @@ export default function ChatInterface() {
                                 </div>
                             </div>
                         </form>
-                        <p className="text-center text-[12px] text-zinc-400 mt-4 font-medium opacity-60">
-                            ChatGPT can make mistakes. Check important info.
+                        <p className="text-center text-[12px] text-zinc-400 mt-4 font-bold opacity-40 uppercase tracking-widest">
+                            Resume Transformer Active v27
                         </p>
                     </div>
                 </div>
 
-                {/* Hidden File Input */}
                 <input
                     type="file"
                     ref={fileInputRef}
                     onChange={handleFileChange}
                     className="hidden"
+                    accept=".txt,.docx,.pdf,.md"
                 />
             </main>
+
+            <style jsx global>{\`
+                .markdown-custom table {
+                    width: 100%;
+                border-collapse: collapse;
+                margin: 20px 0;
+                font-size: 14px;
+                border: 1px solid #e5e5e5;
+                }
+                .markdown-custom th {
+                    background - color: #f9f9f9;
+                text-align: left;
+                padding: 12px;
+                border-bottom: 2px solid #e5e5e5;
+                font-weight: 700;
+                color: #0d0d0d;
+                }
+                .markdown-custom td {
+                    padding: 12px;
+                border-bottom: 1px solid #e5e5e5;
+                color: #424242;
+                }
+                .markdown-custom h3 {
+                    font - weight: 800;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+                font-size: 15px;
+                margin-top: 32px;
+                color: #0d0d0d;
+                border-bottom: 1px solid #f0f0f0;
+                padding-bottom: 8px;
+                }
+            \`}</style>
         </div>
     );
 }

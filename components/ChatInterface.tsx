@@ -7,7 +7,6 @@ import {
     PlusCircle,
     Mic,
     MoreHorizontal,
-    CircleUser,
     Settings,
     FileUp,
     Paperclip,
@@ -452,39 +451,6 @@ export default function ChatInterface() {
                     accept=".txt,.docx,.pdf,.md"
                 />
             </main>
-
-            <style jsx global>{\`
-                .markdown-custom table {
-                    width: 100%;
-                border-collapse: collapse;
-                margin: 20px 0;
-                font-size: 14px;
-                border: 1px solid #e5e5e5;
-                }
-                .markdown-custom th {
-                    background - color: #f9f9f9;
-                text-align: left;
-                padding: 12px;
-                border-bottom: 2px solid #e5e5e5;
-                font-weight: 700;
-                color: #0d0d0d;
-                }
-                .markdown-custom td {
-                    padding: 12px;
-                border-bottom: 1px solid #e5e5e5;
-                color: #424242;
-                }
-                .markdown-custom h3 {
-                    font - weight: 800;
-                text-transform: uppercase;
-                letter-spacing: 0.05em;
-                font-size: 15px;
-                margin-top: 32px;
-                color: #0d0d0d;
-                border-bottom: 1px solid #f0f0f0;
-                padding-bottom: 8px;
-                }
-            \`}</style>
         </div>
     );
 }

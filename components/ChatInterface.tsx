@@ -17,24 +17,12 @@ export default function ChatInterface() {
     const [error, setError] = useState<string | null>(null);
 
     const scrollRef = useRef<HTMLDivElement>(null);
-    const fileInputRef = useRef<HTMLInputElement>(null);
-    const [files, setFiles] = useState<File[]>([]);
 
     useEffect(() => {
         if (scrollRef.current) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
     }, [messages]);
-
-    const checkServerStatus = async () => {
-        try {
-            const res = await fetch('/api/engine');
-            const data = await res.json();
-            alert(`ENGINE API DIAGNOSTICS (v14):\n\nStatus: ${data.status}\nKey: ${data.keyHint}\n\nModel set to GPT-4. Manual streaming active.`);
-        } catch (e) {
-            alert(`Failed diagnostics: ${e}`);
-        }
-    };
 
     const appendMessage = (role: Message["role"], content: string) => {
         const id = Math.random().toString(36).substring(7);
@@ -44,7 +32,7 @@ export default function ChatInterface() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if ((!input.trim() && files.length === 0) || isLoading) return;
+        if (!input.trim() || isLoading) return;
 
         setError(null);
         setIsLoading(true);
@@ -53,55 +41,53 @@ export default function ChatInterface() {
         setInput("");
         appendMessage("user", currentInput);
 
-        // Preparation for assistant response
         const assistantId = appendMessage("assistant", "");
 
         try {
             const response = await fetch('/api/engine', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ messages: [...messages, { role: "user", content: currentInput }] })
+                body: JSON.stringify({ messages: [{ role: "user", content: currentInput }] })
             });
 
-            if (!response.ok) {
-                const errData = await response.json().catch(() => ({}));
-                throw new Error(errData.message || `Server Error: ${response.status}`);
-            }
+            if (!response.ok) throw new Error(`Server Sync Error: ${response.status}`);
 
             const reader = response.body?.getReader();
             const textDecoder = new TextDecoder();
-
-            if (!reader) throw new Error("Stream interrupted");
+            if (!reader) throw new Error("Stream Reader Offline");
 
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
 
-                const chunk = textDecoder.decode(value, { stream: true });
-                // protocol 0:"text"
+                const chunk = textDecoder.decode(value);
                 const lines = chunk.split("\n");
 
                 for (const line of lines) {
-                    if (!line.startsWith('0:')) continue;
-                    try {
-                        const jsonStr = line.substring(2);
-                        const text = JSON.parse(jsonStr);
+                    if (!line.trim()) continue;
 
-                        setMessages(prev => {
-                            const next = [...prev];
-                            const last = next[next.length - 1];
-                            if (last && last.id === assistantId) {
-                                last.content += text;
-                            }
-                            return next;
-                        });
-                    } catch (e) {
-                        // ignore malformed protocol lines
+                    // Protocol 0: text
+                    if (line.startsWith('0:')) {
+                        try {
+                            const text = JSON.parse(line.substring(2));
+                            setMessages(prev => {
+                                const next = [...prev];
+                                const last = next[next.length - 1];
+                                if (last && last.id === assistantId) {
+                                    last.content += text;
+                                }
+                                return next;
+                            });
+                        } catch (e) {
+                            // quiet error
+                        }
+                    } else if (line.startsWith('3:') || line.startsWith('e:')) {
+                        // Error protocol
+                        setError(`AI ENGINE ERROR: ${line.substring(2)}`);
                     }
                 }
             }
         } catch (err: any) {
-            console.error("Manual Stream Error:", err);
             setError(err.message);
         } finally {
             setIsLoading(false);
@@ -109,76 +95,69 @@ export default function ChatInterface() {
     };
 
     return (
-        <div className="flex-1 flex flex-col h-full overflow-hidden relative bg-[#0a0a0a]">
-            {/* Header */}
-            <header className="h-16 border-b border-zinc-800/50 flex items-center px-6 justify-between bg-black/60 backdrop-blur-2xl z-20">
-                <div className="flex items-center gap-4">
-                    <div className="w-8 h-8 bg-gradient-to-br from-[#10a37f] to-[#0d8b6c] rounded-lg flex items-center justify-center text-white shadow-lg">
-                        <span className="text-[10px] font-black">AI</span>
-                    </div>
-                    <h1 className="font-bold text-lg tracking-tight text-white uppercase tracking-widest text-[11px]">Dashboard Controller</h1>
-                    <button onClick={checkServerStatus} className="text-[9px] bg-white/5 hover:bg-white/10 text-white/50 px-3 py-1 rounded-full border border-white/10 font-bold transition-all">CONNECTION</button>
-                </div>
-                <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                    <span className="text-[9px] text-zinc-500 font-black uppercase tracking-[0.2em]">ENGINE v14</span>
+        <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#050505] text-zinc-100 font-sans">
+            {/* Minimal Header */}
+            <header className="h-14 border-b border-zinc-900 flex items-center px-8 justify-between bg-black/40">
+                <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 bg-[#10a37f] rounded-full animate-pulse shadow-[0_0_10px_#10a37f]"></div>
+                    <span className="font-black text-[10px] tracking-[0.4em] uppercase text-zinc-400">System Dashboard v15</span>
                 </div>
             </header>
 
-            {/* Content Area */}
-            <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 md:p-12 space-y-12 scroll-smooth">
+            {/* Chat Body */}
+            <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 md:p-16 space-y-12">
                 {messages.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center">
-                        <div className="text-zinc-800 text-6xl font-black mb-4 select-none">GPT-4</div>
-                        <p className="text-zinc-600 text-sm font-medium tracking-widest uppercase">System Standby</p>
+                    <div className="h-full flex flex-col items-center justify-center opacity-20">
+                        <Plus className="w-16 h-16 stroke-[1]" />
+                        <p className="mt-4 font-bold tracking-[0.2em] uppercase text-[12px]">Initialize Sync</p>
                     </div>
                 ) : (
                     messages.map((m) => (
-                        <div key={m.id} className={cn("flex gap-8 max-w-4xl mx-auto animation-slide-up", m.role === "user" ? "justify-end" : "justify-start")}>
-                            <div className={cn("p-8 rounded-3xl max-w-[90%] border shadow-2xl relative transition-all", m.role === "user" ? "bg-zinc-900 border-zinc-800 text-zinc-200" : "bg-[#111] border-zinc-800/50 text-zinc-100")}>
+                        <div key={m.id} className={cn("flex gap-8 max-w-5xl mx-auto animation-slide-up", m.role === "user" ? "justify-end" : "justify-start")}>
+                            <div className={cn("p-10 rounded-[2.5rem] max-w-[85%] border shadow-2xl relative transition-all", m.role === "user" ? "bg-zinc-900 border-zinc-800" : "bg-black border-zinc-800/80")}>
                                 {m.role !== "user" && (
-                                    <div className="text-[9px] font-black text-[#10a37f] uppercase tracking-[0.3em] mb-6 flex items-center gap-4">
-                                        <div className="w-3 h-0.5 bg-[#10a37f]"></div>
-                                        Result Response
+                                    <div className="text-[10px] font-black text-[#10a37f] uppercase tracking-[0.3em] mb-8 flex items-center gap-4">
+                                        <div className="w-4 h-0.5 bg-[#10a37f]"></div>
+                                        Result Output
                                     </div>
                                 )}
-                                <div className="prose prose-invert max-w-none whitespace-pre-wrap leading-relaxed text-[15px] font-medium opacity-90">
-                                    {m.content || (isLoading && m.role !== 'user' ? "Compiling results..." : "")}
+                                <div className="prose prose-invert max-w-none whitespace-pre-wrap leading-relaxed text-[16px] font-medium opacity-90">
+                                    {m.content || (isLoading && m.role !== 'user' ? "Awaiting stream handshake..." : "")}
                                 </div>
                             </div>
                         </div>
                     ))
                 )}
-
                 {error && (
-                    <div className="max-w-4xl mx-auto p-6 bg-red-950/30 border border-red-500/20 rounded-3xl text-red-500 text-[10px] font-bold tracking-widest uppercase text-center">
+                    <div className="max-w-4xl mx-auto p-6 bg-red-900/10 border border-red-500/20 rounded-3xl text-red-500 text-center font-black uppercase text-[10px] tracking-widest">
                         {error}
                     </div>
                 )}
             </div>
 
-            {/* Fixed Footer Badge */}
-            <div className="fixed bottom-32 right-8 z-50 pointer-events-none">
-                <div className="bg-green-600 px-6 py-2 rounded-full border border-green-400 shadow-[0_0_20px_rgba(22,163,74,0.4)] flex items-center gap-3">
-                    <span className="text-[10px] text-white font-black uppercase tracking-[0.3em]">v14 - SUCCESSFUL HANDSHAKE</span>
+            {/* Version Badge Footer */}
+            <div className="fixed bottom-32 right-12 pointer-events-none group">
+                <div className="bg-zinc-100 text-black px-8 py-3 rounded-full border border-white shadow-2xl flex items-center gap-4 transition-transform group-hover:scale-110">
+                    <Send className="w-3 h-3" />
+                    <span className="text-[11px] font-black uppercase tracking-[0.3em]">COMPATIBILITY MODE: v15 ACTIVE</span>
                 </div>
             </div>
 
             {/* Input Overlay */}
-            <div className="p-8 pt-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a] to-transparent">
+            <div className="p-8 pb-12 bg-gradient-to-t from-black via-black to-transparent">
                 <form onSubmit={handleSubmit} className="max-w-4xl mx-auto relative group">
-                    <div className="absolute -inset-0.5 bg-gradient-to-r from-[#10a37f] to-zinc-800 rounded-[2rem] opacity-20 group-focus-within:opacity-40 transition-opacity blur"></div>
-                    <div className="relative bg-zinc-900 border border-zinc-800 rounded-[2rem] shadow-2xl flex p-4 items-center gap-4">
+                    <div className="absolute -inset-1 bg-gradient-to-r from-zinc-700 to-zinc-900 rounded-[3rem] opacity-10 group-focus-within:opacity-30 blur-lg transition-opacity"></div>
+                    <div className="relative bg-[#0a0a0a] border border-zinc-800/50 rounded-[3rem] shadow-3xl p-4 flex items-center gap-6">
                         <textarea
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
                             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmit(e); } }}
-                            placeholder="Type query..."
-                            className="flex-1 bg-transparent border-none focus:ring-0 resize-none p-4 text-zinc-100 placeholder-zinc-700 font-bold"
+                            placeholder="INITIALIZE SEARCH..."
+                            className="flex-1 bg-transparent border-none focus:ring-0 resize-none p-4 text-zinc-100 placeholder-zinc-800 font-bold uppercase tracking-tighter text-xl"
                             rows={1}
                         />
-                        <button type="submit" disabled={!input.trim() || isLoading} className="w-14 h-14 bg-white text-black rounded-2xl flex items-center justify-center hover:bg-zinc-200 transition-all disabled:opacity-20 active:scale-90">
-                            <Send className={cn("w-6 h-6", isLoading && "animate-pulse")} />
+                        <button type="submit" disabled={!input.trim() || isLoading} className="w-16 h-16 bg-white text-black rounded-full flex items-center justify-center hover:bg-[#ccc] transition-all disabled:opacity-5 active:scale-90">
+                            <Send className={cn("w-6 h-6", isLoading && "animate-spin")} />
                         </button>
                     </div>
                 </form>

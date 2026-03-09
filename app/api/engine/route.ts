@@ -8,7 +8,7 @@ export async function GET() {
     const key = process.env.OPENAI_API_KEY || "";
     const hint = key.length > 8 ? `${key.substring(0, 4)}...${key.substring(key.length - 4)}` : "INVALID_LENGTH";
     return new Response(JSON.stringify({
-        status: "Engine API Active v14",
+        status: "Engine API Active v15",
         keyLength: key.length,
         keyHint: hint,
         provider: "openai",
@@ -32,23 +32,15 @@ export async function POST(req: Request) {
 
         if (!key) return new Response(JSON.stringify({ error: "API Key Missing" }), { status: 500 });
 
-        // Connectivity Pong
-        if (body.test === "pong") {
-            return new Response(JSON.stringify({ message: "PONG_READY", id: requestId }), {
-                headers: { "Content-Type": "application/json" }
-            });
-        }
-
         const openai = createOpenAI({ apiKey: key });
         const { messages } = body;
 
-        // Diagnostic Test (Permission Check)
+        // Diagnostic Test
         if (body.test === "diagnostic") {
             try {
-                // Try gpt-4 as we confirmed it exists in the user's list
                 const response = await generateText({
-                    model: openai("gpt-4") as any,
-                    prompt: "Say 'GPT-4_ACTIVE'",
+                    model: openai("gpt-3.5-turbo") as any,
+                    prompt: "Say 'COMPAT_MODE_ACTIVE'",
                 });
                 return new Response(JSON.stringify({ success: true, text: response.text }), { headers: { "Content-Type": "application/json" } });
             } catch (e: any) {
@@ -56,11 +48,11 @@ export async function POST(req: Request) {
             }
         }
 
-        console.log(`>>>> [ENGINE_INIT:${requestId}] Model: gpt-4, Messages: ${messages?.length}`);
+        console.log(`>>>> [ENGINE_INIT:${requestId}] Model: gpt-3.5-turbo, Messages: ${messages?.length}`);
 
-        // Phase 1: Stream AI
+        // Phase 1: Stream AI (Switching to 3.5 for maximum compatibility proof)
         const result = streamText({
-            model: openai("gpt-4") as any, // PIVOT TO GPT-4
+            model: openai("gpt-3.5-turbo") as any,
             system: "You are a helpful assistant. Provide clear results.",
             messages,
         });
@@ -71,17 +63,26 @@ export async function POST(req: Request) {
         if (!originalStream) throw new Error("Stream creation failed");
 
         const encoder = new TextEncoder();
+        let chunkCount = 0;
+
         const transformStream = new TransformStream({
             start(controller) {
-                // Keep the handshake to show the pipe is working
                 controller.enqueue(encoder.encode(`0:"[HANDSHAKE: SERVER OK]"\n`));
-                controller.enqueue(encoder.encode(`0:"[PROCESSING: GPT-4 ENGAGED]"\n`));
+                controller.enqueue(encoder.encode(`0:"[MODE: COMPATIBILITY ENGAGED]"\n`));
             },
             transform(chunk, controller) {
+                chunkCount++;
+                // Log every 5 chunks to avoid cluttering but show life
+                if (chunkCount % 5 === 1) {
+                    controller.enqueue(encoder.encode(`0:"[SYNC: RECEIVING DATA ${chunkCount}]"\n`));
+                }
                 controller.enqueue(chunk);
             },
             flush(controller) {
-                console.log(`>>>> [ENGINE_COMPLETE:${requestId}] Stream finished.`);
+                console.log(`>>>> [ENGINE_COMPLETE:${requestId}] Stream finished with ${chunkCount} chunks.`);
+                if (chunkCount === 0) {
+                    controller.enqueue(encoder.encode(`0:"[ERROR: AI RETURNED ZERO CHUNKS. Check billing or model limits.]"\n`));
+                }
             }
         });
 

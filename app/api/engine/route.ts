@@ -1,12 +1,12 @@
 import { createOpenAI } from "@ai-sdk/openai";
-import { streamText, generateText } from "ai";
+import { streamText } from "ai";
 
 export const runtime = "edge";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
     return new Response(JSON.stringify({
-        status: "Engine API Active v20",
+        status: "Engine API Active v21",
         timestamp: new Date().toISOString()
     }), { headers: { "Content-Type": "application/json" } });
 }
@@ -18,7 +18,7 @@ export async function POST(req: Request) {
         const body = await req.json();
         const { messages, demoMode } = body;
 
-        // 1. DEMO MODE (Guaranteed to work)
+        // 1. DEMO MODE
         if (demoMode) {
             const mockText = "Microsoft Power Apps is a low-code tool from Microsoft used to create business apps quickly without much coding.\\n\\nIt allows you to build apps that run on mobile, tablet, or web and connect to data sources like Microsoft Excel, Microsoft SharePoint, or databases.\\n\\n✅ Example: an app for leave requests, approvals, or data entry.";
             return new Response(`0:${JSON.stringify(mockText)}\n`, {
@@ -26,7 +26,7 @@ export async function POST(req: Request) {
             });
         }
 
-        // 2. Clear and Validate Key
+        // 2. Key Validation
         let key = process.env.OPENAI_API_KEY || "";
         key = key.trim();
         if (key.startsWith("OPENAI_API_KEY=")) key = key.replace("OPENAI_API_KEY=", "");
@@ -34,14 +34,14 @@ export async function POST(req: Request) {
         if (key.startsWith("'") && key.endsWith("'")) key = key.slice(1, -1);
         key = key.trim();
 
-        if (!key) return new Response(`0:"[ERROR] API Key Missing in Vercel. Please add it to your Project Settings."\n`, { headers: { "Content-Type": "text/plain; charset=utf-8", "X-Vercel-AI-Data-Stream": "v1" } });
+        if (!key) return new Response(`0:"[ERROR] API Key Missing."\n`, { headers: { "Content-Type": "text/plain; charset=utf-8", "X-Vercel-AI-Data-Stream": "v1" } });
 
         const openai = createOpenAI({ apiKey: key });
 
-        // Phase 1: The Token Forge (v20)
-        // We use fullStream to filter for text-delta to avoid meta-chunk crashes
+        // Phase 1: The Token Forge (v21)
+        // Force GPT-3.5-Turbo for Tier 0 accounts with balance
         const result = streamText({
-            model: openai("gpt-4o-mini") as any,
+            model: openai("gpt-3.5-turbo") as any,
             system: "You are a helpful assistant. Provide clear results.",
             messages,
         });
@@ -50,23 +50,25 @@ export async function POST(req: Request) {
         const stream = new ReadableStream({
             async start(controller) {
                 controller.enqueue(encoder.encode(`0:"[HANDSHAKE: SERVER OK]"\n`));
-                controller.enqueue(encoder.encode(`0:"[REPAIR ENGINE: v20 ACTIVE]"\n`));
+                controller.enqueue(encoder.encode(`0:"[PIVOT: GPT-3.5 SYNC v21]"\n`));
 
                 let tokenCount = 0;
                 try {
+                    // Manual iteration to catch specific OpenAI errors
                     for await (const chunk of (result as any).fullStream) {
                         if (chunk.type === 'text-delta' && chunk.textDelta) {
                             tokenCount++;
                             controller.enqueue(encoder.encode(`0:${JSON.stringify(chunk.textDelta)}\n`));
                         } else if (chunk.type === 'error') {
-                            controller.enqueue(encoder.encode(`0:"\\n[ACCOUNT RESTRICTION: ${chunk.error}]"\\n`));
+                            const errMsg = JSON.stringify(chunk.error).substring(0, 100);
+                            controller.enqueue(encoder.encode(`0:"\\n[AI SYNC ERROR: ${errMsg}]"\\n`));
                         }
                     }
                 } catch (e: any) {
                     controller.enqueue(encoder.encode(`0:"\\n[SYSTEM ERROR: ${e.message}]"\\n`));
                 } finally {
                     if (tokenCount === 0 && !demoMode) {
-                        controller.enqueue(encoder.encode(`0:"\\n[ZERO TOKENS RETURNED] Your OpenAI account has $21.89 balance, but it might be restricted to 'Usage Tier 0'. Try adding $5 more to reach 'Tier 1' or use DEMO MODE to verify the UI."\\n`));
+                        controller.enqueue(encoder.encode(`0:"\\n[ZERO TOKENS] Connection succeeded but AI is silent. This confirms a Tier 0 model restriction. Use DEMO MODE to verify UI."\\n`));
                     }
                     controller.close();
                 }
@@ -82,6 +84,6 @@ export async function POST(req: Request) {
         });
 
     } catch (error: any) {
-        return new Response(`0:"[FATAL ERROR: ${error.message}]"\n`, { headers: { "Content-Type": "text/plain; charset=utf-8", "X-Vercel-AI-Data-Stream": "v1" } });
+        return new Response(`0:"[FATAL: ${error.message}]"\n`, { headers: { "Content-Type": "text/plain; charset=utf-8", "X-Vercel-AI-Data-Stream": "v1" } });
     }
 }

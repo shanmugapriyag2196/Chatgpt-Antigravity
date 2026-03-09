@@ -262,7 +262,7 @@ export default function ChatInterface() {
                 >
                     <div className="flex items-center gap-3">
                         <PlusCircle className="w-5 h-5 text-[#0d0d0d]" />
-                        <span className="text-[14px] font-semibold text-[#0d0d0d]">New chat</span>
+                        <span className="text-[14px] font-semibold text-[#0d0d0d]">New Agent Task</span>
                     </div>
                 </button>
 
@@ -325,7 +325,7 @@ export default function ChatInterface() {
             <main className="flex-1 flex flex-col relative bg-white">
                 <header className="h-14 flex items-center px-6 justify-between border-b border-[#f9f9f9]/10">
                     <div className="flex items-center gap-2 group cursor-pointer opacity-80 hover:opacity-100 transition-opacity">
-                        <span className="text-[16px] font-bold text-[#424242]">ChatGPT</span>
+                        <span className="text-[16px] font-bold text-[#424242]">Value Global AI Agent</span>
                         <MoreHorizontal className="w-4 h-4 text-zinc-300" />
                     </div>
                 </header>
@@ -333,11 +333,11 @@ export default function ChatInterface() {
                 <div ref={scrollRef} className="flex-1 overflow-y-auto w-full">
                     {messages.length === 0 ? (
                         <div className="h-full flex flex-col items-center justify-center -mt-20">
-                            <h1 className="text-[32px] font-bold text-[#0d0d0d] mb-12 tracking-tight">What are you working on?</h1>
+                            <h1 className="text-[32px] font-bold text-[#0d0d0d] mb-12 tracking-tight">How can I assist you today?</h1>
                             {isAnalyzing && (
                                 <div className="flex flex-col items-center gap-4 animate-in fade-in zoom-in-95 duration-700">
                                     <Loader2 className="w-12 h-12 text-[#10a37f] animate-spin" />
-                                    <span className="text-[14px] font-bold text-[#10a37f] uppercase tracking-widest animate-pulse">Forging Standard Resume...</span>
+                                    <span className="text-[14px] font-bold text-[#10a37f] uppercase tracking-widest animate-pulse">Executing Agent Task...</span>
                                 </div>
                             )}
                         </div>
@@ -349,7 +349,7 @@ export default function ChatInterface() {
                                         "w-8 h-8 rounded-full flex items-center justify-center text-[13px] border shrink-0 shadow-sm",
                                         m.role === "user" ? "bg-white border-zinc-200 text-zinc-400" : "bg-[#10a37f] border-[#10a37f] text-white"
                                     )}>
-                                        {m.role === "user" ? "SP" : "AI"}
+                                        {m.role === "user" ? "User" : "Agent"}
                                     </div>
                                     <div className="flex-1 pt-1">
                                         {m.isUpload ? (
@@ -360,7 +360,7 @@ export default function ChatInterface() {
                                                 </div>
                                                 <div className="flex flex-col relative">
                                                     <span className="text-[14px] font-bold text-[#0d0d0d]">{m.fileName}</span>
-                                                    <span className="text-[11px] text-[#10a37f] font-bold uppercase tracking-wider">Transformer Active</span>
+                                                    <span className="text-[11px] text-[#10a37f] font-bold uppercase tracking-wider">Task Context Attached</span>
                                                 </div>
                                             </div>
                                         ) : (
@@ -373,7 +373,7 @@ export default function ChatInterface() {
                             ))}
                             {isLoading && !isAnalyzing && (
                                 <div className="flex gap-5 animate-pulse">
-                                    <div className="w-8 h-8 rounded-full bg-[#10a37f]/80 flex items-center justify-center text-white text-[11px]">AI</div>
+                                    <div className="w-8 h-8 rounded-full bg-[#10a37f]/80 flex items-center justify-center text-white text-[11px]">Agent</div>
                                     <div className="flex-1 pt-3 space-y-3">
                                         <div className="h-4 bg-zinc-100 rounded-full w-[90%]"></div>
                                         <div className="h-4 bg-zinc-100 rounded-full w-[70%]"></div>
@@ -415,7 +415,7 @@ export default function ChatInterface() {
                                             handleSubmit(e);
                                         }
                                     }}
-                                    placeholder="Ask anything or Upload Resume..."
+                                    placeholder="Command the AI Agent or Upload Task..."
                                     className="flex-1 bg-transparent border-none focus:ring-0 resize-none py-4 px-3 text-[16px] text-[#0d0d0d] placeholder-zinc-500 font-medium"
                                     rows={1}
                                 />
@@ -438,7 +438,7 @@ export default function ChatInterface() {
                             </div>
                         </form>
                         <p className="text-center text-[12px] text-zinc-400 mt-4 font-bold opacity-40 uppercase tracking-widest">
-                            Resume Transformer Active v27
+                            Value Global Intelligence v29
                         </p>
                     </div>
                 </div>

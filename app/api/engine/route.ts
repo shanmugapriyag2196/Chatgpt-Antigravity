@@ -5,34 +5,34 @@ export async function GET() {
     const key = process.env.OPENAI_API_KEY || "";
     const suffix = key.length > 4 ? key.slice(-4) : "NONE";
     return new Response(JSON.stringify({
-        status: "Resume Transformer API Active v27",
+        status: "Value Global AI Agent API Active v29",
         keySuffix: suffix,
         timestamp: new Date().toISOString()
     }), { headers: { "Content-Type": "application/json" } });
 }
 
-const RESUME_SYSTEM_PROMPT = `
-You are a professional Resume Transformation Expert for "Value Global".
-Your goal is to take a user's resume (text or file content) and transform it into the "Value Global Standard Structure".
+const AGENT_SYSTEM_PROMPT = `
+You are the "Value Global AI Agent", a professional, multi-skilled digital operative. 
+You do not just chat; you execute tasks, analyze data, and transform information for the Value Global enterprise.
 
-FORMATTING RULES:
-1. HEADER: Start with the Header: "Value Global - Professional Profile".
-2. PROFILE SUMMARY: A concise bulleted section summarizing years of experience (e.g., "Over 21 years of experience..."). Focus on architecting and delivering solutions.
-3. TECHNICAL EXPERTISE: Use a Markdown Table with TWO columns: "Tool / Technology" and "Area of Exposure".
-   Example:
-   | Tool / Technology | Area of Exposure |
-   | --- | --- |
-   | Database | Oracle, SQL Server, Neo4J, MySQL |
-   | CRM | Salesforce, Microsoft Dynamics |
-4. PRIMARY TECHNOLOGY: A bulleted list of core tech stacks.
-5. PROFESSIONAL EXPERIENCE: 
-   - Each project MUST have: "Title: [Project Title]", "[Period]", and "Responsibilities" (bulleted).
-   - Format: "Title: SAP Data Migration and API enablement [2019 - Present]"
-6. CERTIFICATIONS: A bulleted list of official certifications at the end.
+CORE IDENTITIES:
+1. THE ARCHITECT: You analyze complex business problems and provide structured, technical solutions.
+2. THE TRANSFORMER: You specialize in converting raw data (like resumes) into professional standard formats.
+3. THE STRATEGIST: You help users refine their goals and provide actionable insights.
+
+SPECIALIZED SKILL: RESUME TRANSFORMATION
+When a user provides a resume, you MUST transform it into the "Value Global Standard Structure":
+- HEADER: "Value Global - Professional Profile"
+- PROFILE SUMMARY: High-impact bullet points focusing on years of experience and architecture.
+- TECHNICAL EXPERTISE: A Markdown Table with "Tool / Technology" and "Area of Exposure".
+- PRIMARY TECHNOLOGY: A bulleted list of core tech.
+- PROFESSIONAL EXPERIENCE: "Title: [Project] [Dates]" + Responsibilities.
+- CERTIFICATIONS: Bulleted list.
 
 TONAL RULES:
-- Use professional, high-impact language (e.g., "Seasoned Architect", "Proven expertise", "Mentored teams").
-- Ensure the layout is clean and easy to read.
+- Be concise. 
+- Use active, professional language.
+- If the user asks for non-resume tasks, respond as a high-level Business Analyst/Technical Expert.
 `;
 
 export async function POST(req: Request) {
@@ -42,7 +42,7 @@ export async function POST(req: Request) {
 
         // 1. DEMO MODE
         if (demoMode) {
-            const mockText = "Value Global - Professional Profile\\n\\n### Profile Summary:\\n- Seasoned Integration Architect with over 21 years of experience...\\n\\n### Technical Expertise:\\n| Tool / Technology | Area of Exposure |\\n| --- | --- |\\n| Database | Oracle, SQL Server |\\n| CRM | Salesforce |\\n\\n### Professional Experience:\\n**Title: SAP Data Migration [2019 - Present]**\\n- Architected and delivered large-scale solutions...";
+            const mockText = "Value Global AI Agent initialized.\\n\\nI am ready to transform your data or analyze your business tasks.";
             return new Response(`0:${JSON.stringify(mockText)}\n`, {
                 headers: { "Content-Type": "text/plain; charset=utf-8", "X-Vercel-AI-Data-Stream": "v1" }
             });
@@ -58,7 +58,7 @@ export async function POST(req: Request) {
 
         if (!key) return new Response(`0:"[ERROR] API Key Missing."\n`, { headers: { "Content-Type": "text/plain; charset=utf-8", "X-Vercel-AI-Data-Stream": "v1" } });
 
-        // Phase 1: The Direct Forge (v27)
+        // Phase 1: The Direct Forge (v29)
         const encoder = new TextEncoder();
         const stream = new ReadableStream({
             async start(controller) {
@@ -72,7 +72,7 @@ export async function POST(req: Request) {
                         body: JSON.stringify({
                             model: 'gpt-4o',
                             messages: [
-                                { role: 'system', content: RESUME_SYSTEM_PROMPT },
+                                { role: 'system', content: AGENT_SYSTEM_PROMPT },
                                 ...messages.map((m: any) => ({ role: m.role, content: m.content }))
                             ],
                             stream: false
@@ -88,7 +88,7 @@ export async function POST(req: Request) {
                         const aiContent = data.choices[0].message.content;
                         controller.enqueue(encoder.encode(`0:${JSON.stringify(aiContent)}\n`));
                     } else {
-                        controller.enqueue(encoder.encode(`0:"\\n[EMPTY RESPONSE] Received empty results from AI."\n`));
+                        controller.enqueue(encoder.encode(`0:"\\n[EMPTY RESPONSE] Received empty results from Agent."\n`));
                     }
                 } catch (e: any) {
                     controller.enqueue(encoder.encode(`0:"\\n[NETWORK ERROR: ${e.message}]"\\n`));

@@ -18,6 +18,7 @@ export default function ChatInterface() {
     const [demoMode, setDemoMode] = useState(false);
 
     const scrollRef = useRef<HTMLDivElement>(null);
+    const bufferRef = useRef(""); // For partial stream chunks
 
     useEffect(() => {
         if (scrollRef.current) {
@@ -42,6 +43,7 @@ export default function ChatInterface() {
 
         setError(null);
         setIsLoading(true);
+        bufferRef.current = "";
 
         const currentInput = input;
         setInput("");
@@ -66,13 +68,17 @@ export default function ChatInterface() {
             if (!reader) throw new Error("Stream Reader Not Available");
 
             let hasContent = false;
+            let streamBuffer = "";
 
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
 
-                const chunk = textDecoder.decode(value);
-                const lines = chunk.split("\n");
+                streamBuffer += textDecoder.decode(value, { stream: true });
+                const lines = streamBuffer.split("\n");
+
+                // Keep the last partial line in buffer
+                streamBuffer = lines.pop() || "";
 
                 for (const line of lines) {
                     if (!line.startsWith('0:')) continue;
@@ -115,7 +121,7 @@ export default function ChatInterface() {
                     <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center text-black shadow-lg">
                         <Zap className="w-4 h-4 fill-current" />
                     </div>
-                    <span className="font-black text-[10px] tracking-[0.5em] uppercase text-white">System Console v16</span>
+                    <span className="font-black text-[10px] tracking-[0.5em] uppercase text-white">System Console v17</span>
 
                     <button
                         onClick={toggleDemo}
@@ -155,7 +161,7 @@ export default function ChatInterface() {
                                 "p-12 rounded-[3.5rem] max-w-[90%] border shadow-[0_0_50px_rgba(0,0,0,0.5)] relative group transition-all duration-500",
                                 m.role === "user"
                                     ? "bg-zinc-900/80 border-zinc-800 text-zinc-200"
-                                    : "bg-surface border-zinc-800/50 text-white"
+                                    : "bg-black border-zinc-800/50 text-white"
                             )}>
                                 {m.role === "assistant" && (
                                     <div className="flex items-center gap-4 mb-10">

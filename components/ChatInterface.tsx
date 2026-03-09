@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Send, Paperclip, X, Plus } from "lucide-react";
+import { Send, Plus, Zap, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Message {
@@ -15,6 +15,7 @@ export default function ChatInterface() {
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [demoMode, setDemoMode] = useState(false);
 
     const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -28,6 +29,11 @@ export default function ChatInterface() {
         const id = Math.random().toString(36).substring(7);
         setMessages(prev => [...prev, { id, role, content }]);
         return id;
+    };
+
+    const toggleDemo = () => {
+        setDemoMode(!demoMode);
+        alert(demoMode ? "DEMO MODE DISABLED" : "DEMO MODE ENABLED: AI results will now be simulated.");
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -47,14 +53,19 @@ export default function ChatInterface() {
             const response = await fetch('/api/engine', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ messages: [{ role: "user", content: currentInput }] })
+                body: JSON.stringify({
+                    messages: [{ role: "user", content: currentInput }],
+                    demoMode: demoMode
+                })
             });
 
-            if (!response.ok) throw new Error(`Server Sync Error: ${response.status}`);
+            if (!response.ok) throw new Error(`Network Sync Failed: ${response.status}`);
 
             const reader = response.body?.getReader();
             const textDecoder = new TextDecoder();
-            if (!reader) throw new Error("Stream Reader Offline");
+            if (!reader) throw new Error("Stream Reader Not Available");
+
+            let hasContent = false;
 
             while (true) {
                 const { done, value } = await reader.read();
@@ -64,30 +75,32 @@ export default function ChatInterface() {
                 const lines = chunk.split("\n");
 
                 for (const line of lines) {
-                    if (!line.trim()) continue;
+                    if (!line.startsWith('0:')) continue;
+                    try {
+                        const jsonStr = line.substring(2);
+                        const text = JSON.parse(jsonStr);
 
-                    // Protocol 0: text
-                    if (line.startsWith('0:')) {
-                        try {
-                            const text = JSON.parse(line.substring(2));
-                            setMessages(prev => {
-                                const next = [...prev];
-                                const last = next[next.length - 1];
-                                if (last && last.id === assistantId) {
-                                    last.content += text;
-                                }
-                                return next;
-                            });
-                        } catch (e) {
-                            // quiet error
-                        }
-                    } else if (line.startsWith('3:') || line.startsWith('e:')) {
-                        // Error protocol
-                        setError(`AI ENGINE ERROR: ${line.substring(2)}`);
+                        hasContent = true;
+                        setMessages(prev => {
+                            const next = [...prev];
+                            const last = next[next.length - 1];
+                            if (last && last.id === assistantId) {
+                                last.content += text;
+                            }
+                            return next;
+                        });
+                    } catch (e) {
+                        // ignore malformed lines
                     }
                 }
             }
+
+            if (!hasContent) {
+                throw new Error("AI Engine returned an empty result stream.");
+            }
+
         } catch (err: any) {
+            console.error("Sync Error:", err);
             setError(err.message);
         } finally {
             setIsLoading(false);
@@ -95,69 +108,103 @@ export default function ChatInterface() {
     };
 
     return (
-        <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#050505] text-zinc-100 font-sans">
-            {/* Minimal Header */}
-            <header className="h-14 border-b border-zinc-900 flex items-center px-8 justify-between bg-black/40">
-                <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 bg-[#10a37f] rounded-full animate-pulse shadow-[0_0_10px_#10a37f]"></div>
-                    <span className="font-black text-[10px] tracking-[0.4em] uppercase text-zinc-400">System Dashboard v15</span>
+        <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#020202] text-zinc-100 font-sans">
+            {/* Header */}
+            <header className="h-16 border-b border-zinc-900 flex items-center px-8 justify-between bg-black/80 backdrop-blur-3xl z-30">
+                <div className="flex items-center gap-4">
+                    <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center text-black shadow-lg">
+                        <Zap className="w-4 h-4 fill-current" />
+                    </div>
+                    <span className="font-black text-[10px] tracking-[0.5em] uppercase text-white">System Console v16</span>
+
+                    <button
+                        onClick={toggleDemo}
+                        className={cn(
+                            "px-4 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border transition-all",
+                            demoMode
+                                ? "bg-amber-500/20 text-amber-500 border-amber-500/50 animate-pulse"
+                                : "bg-zinc-900 text-zinc-600 border-zinc-800 hover:text-white"
+                        )}
+                    >
+                        {demoMode ? "DEMO MODE ACTIVE" : "ENABLE DEMO MODE"}
+                    </button>
+                </div>
+
+                <div className="flex items-center gap-3 bg-zinc-900/50 px-4 py-1 rounded-full border border-zinc-800">
+                    <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
+                    <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Core Online</span>
                 </div>
             </header>
 
             {/* Chat Body */}
-            <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 md:p-16 space-y-12">
+            <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 md:p-20 space-y-16 selection:bg-emerald-500/30">
                 {messages.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center opacity-20">
-                        <Plus className="w-16 h-16 stroke-[1]" />
-                        <p className="mt-4 font-bold tracking-[0.2em] uppercase text-[12px]">Initialize Sync</p>
+                    <div className="h-full flex flex-col items-center justify-center space-y-8 opacity-30">
+                        <div className="w-24 h-24 border-2 border-dashed border-zinc-800 rounded-full flex items-center justify-center animate-[spin_10s_linear_infinite]">
+                            <Plus className="w-8 h-8" />
+                        </div>
+                        <div className="text-center">
+                            <h2 className="text-2xl font-black text-white uppercase tracking-[0.3em]">Ready for Query</h2>
+                            <p className="text-zinc-600 text-[10px] font-bold mt-2 tracking-[0.2em] uppercase">Vercel Edge Runtime Active</p>
+                        </div>
                     </div>
                 ) : (
                     messages.map((m) => (
-                        <div key={m.id} className={cn("flex gap-8 max-w-5xl mx-auto animation-slide-up", m.role === "user" ? "justify-end" : "justify-start")}>
-                            <div className={cn("p-10 rounded-[2.5rem] max-w-[85%] border shadow-2xl relative transition-all", m.role === "user" ? "bg-zinc-900 border-zinc-800" : "bg-black border-zinc-800/80")}>
-                                {m.role !== "user" && (
-                                    <div className="text-[10px] font-black text-[#10a37f] uppercase tracking-[0.3em] mb-8 flex items-center gap-4">
-                                        <div className="w-4 h-0.5 bg-[#10a37f]"></div>
-                                        Result Output
+                        <div key={m.id} className={cn("flex gap-10 max-w-5xl mx-auto animation-slide-up", m.role === "user" ? "justify-end" : "justify-start")}>
+                            <div className={cn(
+                                "p-12 rounded-[3.5rem] max-w-[90%] border shadow-[0_0_50px_rgba(0,0,0,0.5)] relative group transition-all duration-500",
+                                m.role === "user"
+                                    ? "bg-zinc-900/80 border-zinc-800 text-zinc-200"
+                                    : "bg-surface border-zinc-800/50 text-white"
+                            )}>
+                                {m.role === "assistant" && (
+                                    <div className="flex items-center gap-4 mb-10">
+                                        <div className="w-1.5 h-8 bg-emerald-500 rounded-full shadow-[0_0_15px_#10a37f]"></div>
+                                        <span className="text-[11px] font-black text-emerald-500 uppercase tracking-[0.4em]">Dashboard Analysis</span>
                                     </div>
                                 )}
-                                <div className="prose prose-invert max-w-none whitespace-pre-wrap leading-relaxed text-[16px] font-medium opacity-90">
-                                    {m.content || (isLoading && m.role !== 'user' ? "Awaiting stream handshake..." : "")}
+                                <div className="prose prose-invert max-w-none whitespace-pre-wrap leading-[1.8] text-[17px] font-medium tracking-tight">
+                                    {m.content || (isLoading && m.role !== 'user' ? "Accessing neural cores..." : "")}
                                 </div>
+                                {m.role === "assistant" && (
+                                    <div className="absolute -bottom-4 right-12 bg-zinc-950 px-4 py-1 rounded-full border border-zinc-800 text-[9px] font-bold text-zinc-600 opacity-0 group-hover:opacity-100 transition-opacity uppercase tracking-widest">
+                                        Verified Result
+                                    </div>
+                                )}
                             </div>
                         </div>
                     ))
                 )}
                 {error && (
-                    <div className="max-w-4xl mx-auto p-6 bg-red-900/10 border border-red-500/20 rounded-3xl text-red-500 text-center font-black uppercase text-[10px] tracking-widest">
-                        {error}
+                    <div className="max-w-4xl mx-auto p-8 bg-red-950/20 border border-red-500/30 rounded-[2rem] flex flex-col items-center gap-4 text-center">
+                        <AlertCircle className="w-8 h-8 text-red-500 mb-2" />
+                        <p className="text-red-500 font-black uppercase text-[12px] tracking-[0.2em]">Sync Interrupted</p>
+                        <p className="text-red-400/80 text-sm font-medium leading-relaxed max-w-md">{error}</p>
+                        <button
+                            onClick={() => window.location.reload()}
+                            className="mt-4 px-6 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 text-[10px] font-black uppercase tracking-widest border border-red-500/30 rounded-full transition-all"
+                        >
+                            Reset Connection
+                        </button>
                     </div>
                 )}
             </div>
 
-            {/* Version Badge Footer */}
-            <div className="fixed bottom-32 right-12 pointer-events-none group">
-                <div className="bg-zinc-100 text-black px-8 py-3 rounded-full border border-white shadow-2xl flex items-center gap-4 transition-transform group-hover:scale-110">
-                    <Send className="w-3 h-3" />
-                    <span className="text-[11px] font-black uppercase tracking-[0.3em]">COMPATIBILITY MODE: v15 ACTIVE</span>
-                </div>
-            </div>
-
-            {/* Input Overlay */}
-            <div className="p-8 pb-12 bg-gradient-to-t from-black via-black to-transparent">
+            {/* Input Dashboard */}
+            <div className="p-8 pb-16 bg-gradient-to-t from-black via-black/80 to-transparent backdrop-blur-md">
                 <form onSubmit={handleSubmit} className="max-w-4xl mx-auto relative group">
-                    <div className="absolute -inset-1 bg-gradient-to-r from-zinc-700 to-zinc-900 rounded-[3rem] opacity-10 group-focus-within:opacity-30 blur-lg transition-opacity"></div>
-                    <div className="relative bg-[#0a0a0a] border border-zinc-800/50 rounded-[3rem] shadow-3xl p-4 flex items-center gap-6">
+                    <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500 to-zinc-800 rounded-[3rem] opacity-0 group-focus-within:opacity-20 blur-xl transition-opacity"></div>
+                    <div className="relative bg-[#080808] border border-zinc-800 rounded-[3rem] shadow-3xl p-4 flex items-center gap-6 focus-within:border-zinc-700/50 transition-colors">
                         <textarea
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
                             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmit(e); } }}
-                            placeholder="INITIALIZE SEARCH..."
-                            className="flex-1 bg-transparent border-none focus:ring-0 resize-none p-4 text-zinc-100 placeholder-zinc-800 font-bold uppercase tracking-tighter text-xl"
+                            placeholder="INPUT QUERY PARAMETERS..."
+                            className="flex-1 bg-transparent border-none focus:ring-0 resize-none p-5 text-white placeholder-zinc-800 font-black uppercase tracking-widest text-lg"
                             rows={1}
                         />
-                        <button type="submit" disabled={!input.trim() || isLoading} className="w-16 h-16 bg-white text-black rounded-full flex items-center justify-center hover:bg-[#ccc] transition-all disabled:opacity-5 active:scale-90">
-                            <Send className={cn("w-6 h-6", isLoading && "animate-spin")} />
+                        <button type="submit" disabled={!input.trim() || isLoading} className="w-20 h-20 bg-emerald-500 text-black rounded-full flex items-center justify-center hover:bg-emerald-400 transition-all disabled:opacity-5 disabled:grayscale active:scale-95 shadow-2xl shadow-emerald-500/20">
+                            <Send className={cn("w-7 h-7", isLoading && "animate-pulse")} />
                         </button>
                     </div>
                 </form>

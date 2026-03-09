@@ -1,12 +1,12 @@
-import { createOpenAI } from "@ai-sdk/openai";
-import { generateText } from "ai";
-
 export const runtime = "edge";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+    const key = process.env.OPENAI_API_KEY || "";
+    const suffix = key.length > 4 ? key.slice(-4) : "NONE";
     return new Response(JSON.stringify({
-        status: "Engine API Active v22 (Flow Sync)",
+        status: "Direct Forge API Active v23",
+        keySuffix: suffix,
         timestamp: new Date().toISOString()
     }), { headers: { "Content-Type": "application/json" } });
 }
@@ -26,44 +26,55 @@ export async function POST(req: Request) {
             });
         }
 
-        // 2. Key Handling
+        // 2. Raw Key Handling
         let key = process.env.OPENAI_API_KEY || "";
         key = key.trim();
+        // Remove common wrapper accidental pastes
         if (key.startsWith("OPENAI_API_KEY=")) key = key.replace("OPENAI_API_KEY=", "");
         if (key.startsWith("\"") && key.endsWith("\"")) key = key.slice(1, -1);
         if (key.startsWith("'") && key.endsWith("'")) key = key.slice(1, -1);
         key = key.trim();
 
+        const keySuffix = key.length > 4 ? key.slice(-4) : "INVALID";
+
         if (!key) return new Response(`0:"[ERROR] API Key Missing."\n`, { headers: { "Content-Type": "text/plain; charset=utf-8", "X-Vercel-AI-Data-Stream": "v1" } });
 
-        const openai = createOpenAI({ apiKey: key });
-
-        // Phase 1: The Flow Sync (v22)
-        // Since the user is in Tier 0 and streaming is blocked (confirmed by zero tokens in v21),
-        // we use generateText (Non-Streaming) which matches the behavior of Make/n8n.
-
+        // Phase 1: The Direct Forge (v23)
+        // We use MANUAL FETCH to OpenAI. No SDKs, no helpers.
         const encoder = new TextEncoder();
         const stream = new ReadableStream({
             async start(controller) {
                 controller.enqueue(encoder.encode(`0:"[HANDSHAKE: SERVER OK]"\n`));
-                controller.enqueue(encoder.encode(`0:"[FLOW SYNC: v22 ACTIVE]"\n`));
+                controller.enqueue(encoder.encode(`0:"[DIRECT FORGE: v23 ACTIVE]"\n`));
+                controller.enqueue(encoder.encode(`0:"[VERIFIER: KEY ENDS IN ${keySuffix}]"\n`));
 
                 try {
-                    // Call generateText (Wait for full response)
-                    const { text } = await generateText({
-                        model: openai("gpt-3.5-turbo") as any,
-                        system: "You are a helpful assistant. Provide clear, short results.",
-                        messages,
+                    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${key}`
+                        },
+                        body: JSON.stringify({
+                            model: 'gpt-4o',
+                            messages: messages.map((m: any) => ({ role: m.role, content: m.content })),
+                            stream: false // Non-streaming for maximum compatibility
+                        })
                     });
 
-                    if (text) {
-                        controller.enqueue(encoder.encode(`0:${JSON.stringify(text)}\n`));
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        const errorMsg = data.error?.message || JSON.stringify(data);
+                        controller.enqueue(encoder.encode(`0:"\\n[OPENAI DIRECT ERROR: ${errorMsg}]"\\n`));
+                    } else if (data.choices && data.choices[0]?.message?.content) {
+                        const aiContent = data.choices[0].message.content;
+                        controller.enqueue(encoder.encode(`0:${JSON.stringify(aiContent)}\n`));
                     } else {
-                        controller.enqueue(encoder.encode(`0:"[ERROR] Flow Sync returned an empty response. Check OpenAI Usage tier."\n`));
+                        controller.enqueue(encoder.encode(`0:"\\n[EMPTY RESPONSE] OpenAI returned success but no text. Data: ${JSON.stringify(data)}"\n`));
                     }
                 } catch (e: any) {
-                    console.error("v22 Generate Error:", e);
-                    controller.enqueue(encoder.encode(`0:"\\n[FLOW SYNC ERROR: ${e.message}]"\\n`));
+                    controller.enqueue(encoder.encode(`0:"\\n[NETWORK ERROR: ${e.message}]"\\n`));
                 } finally {
                     controller.close();
                 }

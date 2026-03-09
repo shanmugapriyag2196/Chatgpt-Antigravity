@@ -1,12 +1,12 @@
 import { createOpenAI } from "@ai-sdk/openai";
-import { streamText } from "ai";
+import { generateText } from "ai";
 
 export const runtime = "edge";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
     return new Response(JSON.stringify({
-        status: "Engine API Active v21",
+        status: "Engine API Active v22 (Flow Sync)",
         timestamp: new Date().toISOString()
     }), { headers: { "Content-Type": "application/json" } });
 }
@@ -26,7 +26,7 @@ export async function POST(req: Request) {
             });
         }
 
-        // 2. Key Validation
+        // 2. Key Handling
         let key = process.env.OPENAI_API_KEY || "";
         key = key.trim();
         if (key.startsWith("OPENAI_API_KEY=")) key = key.replace("OPENAI_API_KEY=", "");
@@ -38,38 +38,33 @@ export async function POST(req: Request) {
 
         const openai = createOpenAI({ apiKey: key });
 
-        // Phase 1: The Token Forge (v21)
-        // Force GPT-3.5-Turbo for Tier 0 accounts with balance
-        const result = streamText({
-            model: openai("gpt-3.5-turbo") as any,
-            system: "You are a helpful assistant. Provide clear results.",
-            messages,
-        });
+        // Phase 1: The Flow Sync (v22)
+        // Since the user is in Tier 0 and streaming is blocked (confirmed by zero tokens in v21),
+        // we use generateText (Non-Streaming) which matches the behavior of Make/n8n.
 
         const encoder = new TextEncoder();
         const stream = new ReadableStream({
             async start(controller) {
                 controller.enqueue(encoder.encode(`0:"[HANDSHAKE: SERVER OK]"\n`));
-                controller.enqueue(encoder.encode(`0:"[PIVOT: GPT-3.5 SYNC v21]"\n`));
+                controller.enqueue(encoder.encode(`0:"[FLOW SYNC: v22 ACTIVE]"\n`));
 
-                let tokenCount = 0;
                 try {
-                    // Manual iteration to catch specific OpenAI errors
-                    for await (const chunk of (result as any).fullStream) {
-                        if (chunk.type === 'text-delta' && chunk.textDelta) {
-                            tokenCount++;
-                            controller.enqueue(encoder.encode(`0:${JSON.stringify(chunk.textDelta)}\n`));
-                        } else if (chunk.type === 'error') {
-                            const errMsg = JSON.stringify(chunk.error).substring(0, 100);
-                            controller.enqueue(encoder.encode(`0:"\\n[AI SYNC ERROR: ${errMsg}]"\\n`));
-                        }
+                    // Call generateText (Wait for full response)
+                    const { text } = await generateText({
+                        model: openai("gpt-3.5-turbo") as any,
+                        system: "You are a helpful assistant. Provide clear, short results.",
+                        messages,
+                    });
+
+                    if (text) {
+                        controller.enqueue(encoder.encode(`0:${JSON.stringify(text)}\n`));
+                    } else {
+                        controller.enqueue(encoder.encode(`0:"[ERROR] Flow Sync returned an empty response. Check OpenAI Usage tier."\n`));
                     }
                 } catch (e: any) {
-                    controller.enqueue(encoder.encode(`0:"\\n[SYSTEM ERROR: ${e.message}]"\\n`));
+                    console.error("v22 Generate Error:", e);
+                    controller.enqueue(encoder.encode(`0:"\\n[FLOW SYNC ERROR: ${e.message}]"\\n`));
                 } finally {
-                    if (tokenCount === 0 && !demoMode) {
-                        controller.enqueue(encoder.encode(`0:"\\n[ZERO TOKENS] Connection succeeded but AI is silent. This confirms a Tier 0 model restriction. Use DEMO MODE to verify UI."\\n`));
-                    }
                     controller.close();
                 }
             }

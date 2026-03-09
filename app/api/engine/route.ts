@@ -8,7 +8,7 @@ export async function GET() {
     const key = process.env.OPENAI_API_KEY || "";
     const hint = key.length > 8 ? `${key.substring(0, 4)}...${key.substring(key.length - 4)}` : "INVALID_LENGTH";
     return new Response(JSON.stringify({
-        status: "Engine API Active v13",
+        status: "Engine API Active v14",
         keyLength: key.length,
         keyHint: hint,
         provider: "openai",
@@ -22,93 +22,75 @@ export async function POST(req: Request) {
 
     try {
         const body = await req.json();
-        console.log(`>>>> [ENGINE_BODY:${requestId}] Payload received:`, JSON.stringify(body).substring(0, 100));
-
         // 1. Get and Clean the Key
         let key = process.env.OPENAI_API_KEY || "";
-
-        // Clean common pasting errors
         key = key.trim();
         if (key.startsWith("OPENAI_API_KEY=")) key = key.replace("OPENAI_API_KEY=", "");
         if (key.startsWith("\"") && key.endsWith("\"")) key = key.slice(1, -1);
         if (key.startsWith("'") && key.endsWith("'")) key = key.slice(1, -1);
         key = key.trim();
 
-        const openai = createOpenAI({ apiKey: key });
+        if (!key) return new Response(JSON.stringify({ error: "API Key Missing" }), { status: 500 });
 
         // Connectivity Pong
         if (body.test === "pong") {
-            return new Response(JSON.stringify({ message: "PONG_READY", id: requestId, keyLen: key.length }), {
+            return new Response(JSON.stringify({ message: "PONG_READY", id: requestId }), {
                 headers: { "Content-Type": "application/json" }
             });
         }
 
-        // Diagnostic (Permission Check)
+        const openai = createOpenAI({ apiKey: key });
+        const { messages } = body;
+
+        // Diagnostic Test (Permission Check)
         if (body.test === "diagnostic") {
-            if (!key) return new Response("Key Missing", { status: 500 });
             try {
+                // Try gpt-4 as we confirmed it exists in the user's list
                 const response = await generateText({
-                    model: openai("gpt-4o-mini") as any,
-                    prompt: "Say 'SUPER_READY'",
+                    model: openai("gpt-4") as any,
+                    prompt: "Say 'GPT-4_ACTIVE'",
                 });
-                return new Response(JSON.stringify({
-                    success: true,
-                    text: response.text || "EMPTY",
-                    modelUsed: "gpt-4o-mini"
-                }), { headers: { "Content-Type": "application/json" } });
+                return new Response(JSON.stringify({ success: true, text: response.text }), { headers: { "Content-Type": "application/json" } });
             } catch (e: any) {
                 return new Response(JSON.stringify({ success: false, error: e.message }), { status: 500 });
             }
         }
 
-        if (!key) return new Response("Key Missing", { status: 500 });
+        console.log(`>>>> [ENGINE_INIT:${requestId}] Model: gpt-4, Messages: ${messages?.length}`);
 
-        const { messages } = body;
+        // Phase 1: Stream AI
+        const result = streamText({
+            model: openai("gpt-4") as any, // PIVOT TO GPT-4
+            system: "You are a helpful assistant. Provide clear results.",
+            messages,
+        });
 
-        // Attempt streamText
-        try {
-            const result = streamText({
-                model: openai("gpt-4o") as any, // Trying 4o first as requested
-                system: "You are a helpful assistant. Always provide a clear response.",
-                messages,
-            });
+        const originalResponse = (result as any).toDataStreamResponse();
+        const originalStream = originalResponse.body;
 
-            // Convert to a transform stream to inject a handshake
-            const originalResponse = (result as any).toDataStreamResponse();
-            const originalStream = originalResponse.body;
+        if (!originalStream) throw new Error("Stream creation failed");
 
-            if (!originalStream) throw new Error("Stream creation failed");
+        const encoder = new TextEncoder();
+        const transformStream = new TransformStream({
+            start(controller) {
+                // Keep the handshake to show the pipe is working
+                controller.enqueue(encoder.encode(`0:"[HANDSHAKE: SERVER OK]"\n`));
+                controller.enqueue(encoder.encode(`0:"[PROCESSING: GPT-4 ENGAGED]"\n`));
+            },
+            transform(chunk, controller) {
+                controller.enqueue(chunk);
+            },
+            flush(controller) {
+                console.log(`>>>> [ENGINE_COMPLETE:${requestId}] Stream finished.`);
+            }
+        });
 
-            // We'll wrap the stream to ensure it's not empty
-            const encoder = new TextEncoder();
-            const transformStream = new TransformStream({
-                start(controller) {
-                    console.log(`>>>> [ENGINE_STREAM:${requestId}] Sending Handshake...`);
-                    controller.enqueue(encoder.encode(`0:"[HANDSHAKE: SERVER REACHED]"\n`));
-                },
-                transform(chunk, controller) {
-                    controller.enqueue(chunk);
-                }
-            });
-
-            return new Response(originalStream.pipeThrough(transformStream), {
-                headers: originalResponse.headers
-            });
-
-        } catch (streamError: any) {
-            console.error(`>>>> [ENGINE_STREAM_ERR:${requestId}]`, streamError);
-            // Fallback to non-streaming if stream fails to even start
-            const fallback = await generateText({
-                model: openai("gpt-4o-mini") as any,
-                prompt: "Server encountered a stream error, but I am still here. How can I help?",
-            });
-            return new Response(`0:${JSON.stringify(fallback.text)}\n`, {
-                headers: { "Content-Type": "text/plain; charset=utf-8", "X-Vercel-AI-Data-Stream": "v1" }
-            });
-        }
+        return new Response(originalStream.pipeThrough(transformStream), {
+            headers: originalResponse.headers
+        });
 
     } catch (error: any) {
-        console.error(">>>> [ENGINE_ERROR]", error);
+        console.error(">>>> [ENGINE_FATAL_ERROR]", error);
         return new Response(JSON.stringify({ error: true, message: error.message }), { status: 500 });
     }
 }

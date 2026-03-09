@@ -33,7 +33,7 @@ export default function ChatInterface() {
 
     const toggleDemo = () => {
         setDemoMode(!demoMode);
-        alert(demoMode ? "DEMO MODE DISABLED" : "DEMO MODE ENABLED: Dashboard will now show high-quality mock data.");
+        alert(demoMode ? "DEMO MODE DISABLED" : "DEMO MODE ENABLED: Dashboard will now show high-quality mock results.");
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -64,7 +64,7 @@ export default function ChatInterface() {
 
             const reader = response.body?.getReader();
             const textDecoder = new TextDecoder();
-            if (!reader) throw new Error("Stream Reader Not Available");
+            if (!reader) throw new Error("Stream Offline");
 
             let streamBuffer = "";
 
@@ -83,7 +83,7 @@ export default function ChatInterface() {
                         const text = JSON.parse(jsonStr);
 
                         // Ignore handshake messages to detect real response
-                        if (!text.includes("[HANDSHAKE") && !text.includes("[PROTOCOL")) {
+                        if (!text.includes("[HANDSHAKE") && !text.includes("ACTIVE]")) {
                             hasTokens = true;
                         }
 
@@ -102,11 +102,11 @@ export default function ChatInterface() {
             }
 
             if (!hasTokens && !demoMode) {
-                throw new Error("AI provider connected but returned zero text tokens. This is common if the OpenAI account has billing issues or restrictions.");
+                throw new Error("AI provider connected but returned zero text tokens. This usually happens if the OpenAI account is restricted or out of balance.");
             }
 
         } catch (err: any) {
-            console.error("Stream Termination:", err);
+            console.error("Token Forge Error:", err);
             setError(err.message);
         } finally {
             setIsLoading(false);
@@ -114,98 +114,98 @@ export default function ChatInterface() {
     };
 
     return (
-        <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#020202] text-zinc-100 font-sans">
-            {/* Minimal Header */}
-            <header className="h-16 border-b border-zinc-900 flex items-center px-8 justify-between bg-black/80 backdrop-blur-3xl z-40">
-                <div className="flex items-center gap-4">
-                    <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center text-black shadow-[0_0_15px_rgba(16,163,127,0.4)]">
-                        <Zap className="w-4 h-4 fill-current" />
+        <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#0a0a0a] text-zinc-100 font-sans">
+            {/* Header */}
+            <header className="h-16 border-b border-zinc-900 flex items-center px-10 justify-between bg-black/60 backdrop-blur-3xl z-40">
+                <div className="flex items-center gap-5">
+                    <div className="w-10 h-10 bg-[#10a37f] rounded-xl flex items-center justify-center text-white shadow-[0_0_20px_rgba(16,163,127,0.3)]">
+                        <Zap className="w-5 h-5 fill-current" />
                     </div>
-                    <span className="font-black text-[10px] tracking-[0.5em] uppercase text-white">Result Engine v18</span>
+                    <span className="font-black text-[11px] tracking-[0.5em] uppercase text-white/90">Result Engine v19</span>
 
                     <button
                         onClick={toggleDemo}
                         className={cn(
-                            "px-4 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border transition-all",
+                            "px-5 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border transition-all",
                             demoMode
-                                ? "bg-amber-500/20 text-amber-500 border-amber-500/50 animate-pulse"
-                                : "bg-zinc-900/50 text-zinc-600 border-zinc-800 hover:text-white"
+                                ? "bg-amber-500/20 text-amber-500 border-amber-500/50"
+                                : "bg-zinc-900 text-zinc-600 border-zinc-800 hover:text-white"
                         )}
                     >
-                        {demoMode ? "DEMO MODE ACTIVE" : "ENABLE DEMO MODE"}
+                        {demoMode ? "DEMO MODE ON" : "DEMO MODE OFF"}
                     </button>
                 </div>
 
-                <div className="flex items-center gap-3 bg-zinc-950 px-4 py-1 rounded-full border border-zinc-800">
-                    <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_#10a37f]"></div>
-                    <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Dash Online</span>
+                <div className="hidden md:flex items-center gap-4 bg-zinc-950 px-5 py-1.5 rounded-full border border-zinc-900">
+                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_10px_#10a37f]"></div>
+                    <span className="text-[10px] font-black text-emerald-500/80 uppercase tracking-widest">Dash Active</span>
                 </div>
             </header>
 
             {/* Chat Content */}
-            <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 md:p-20 space-y-16 selection:bg-emerald-500/30">
+            <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 md:p-24 space-y-20 selection:bg-emerald-500/30">
                 {messages.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center space-y-8 opacity-20">
-                        <div className="w-24 h-24 border border-zinc-800 rounded-full flex items-center justify-center">
-                            <Plus className="w-8 h-8 stroke-1" />
+                    <div className="h-full flex flex-col items-center justify-center space-y-10 opacity-10">
+                        <div className="w-32 h-32 border-2 border-dashed border-zinc-800 rounded-full flex items-center justify-center">
+                            <Plus className="w-10 h-10 stroke-1" />
                         </div>
                         <div className="text-center">
-                            <h2 className="text-xl font-black text-white uppercase tracking-[0.4em]">Initialize Analysis</h2>
-                            <p className="text-zinc-700 text-[10px] font-bold mt-2 tracking-[0.2em] uppercase underline decoration-emerald-500/50 underline-offset-8 decoration-2">Manual Parsing Active</p>
+                            <h2 className="text-3xl font-black text-white uppercase tracking-[0.5em]">Input Search</h2>
+                            <p className="text-zinc-700 text-[11px] font-bold mt-4 tracking-[0.3em] uppercase underline decoration-emerald-500/40 underline-offset-[12px] decoration-4">Token Forge Ready</p>
                         </div>
                     </div>
                 ) : (
                     messages.map((m) => (
-                        <div key={m.id} className={cn("flex gap-10 max-w-5xl mx-auto animation-slide-up", m.role === "user" ? "justify-end" : "justify-start")}>
+                        <div key={m.id} className={cn("flex gap-12 max-w-5xl mx-auto animation-slide-up", m.role === "user" ? "justify-end" : "justify-start")}>
                             <div className={cn(
-                                "p-12 rounded-[3.5rem] max-w-[90%] border shadow-[0_0_80px_rgba(0,0,0,0.8)] relative group transition-all duration-700",
+                                "p-14 rounded-[4rem] max-w-[95%] border shadow-[0_40px_100px_rgba(0,0,0,0.8)] relative group transition-all duration-700",
                                 m.role === "user"
-                                    ? "bg-zinc-900 border-zinc-800 text-zinc-200"
-                                    : "bg-surface border-zinc-900 text-white"
+                                    ? "bg-zinc-900/40 border-zinc-800 text-zinc-200"
+                                    : "bg-surface border-zinc-900/60 text-white"
                             )}>
                                 {m.role === "assistant" && (
-                                    <div className="flex items-center gap-4 mb-8">
-                                        <div className="w-1 h-6 bg-emerald-500 rounded-full shadow-[0_0_10px_#10a37f]"></div>
-                                        <span className="text-[11px] font-black text-emerald-500 uppercase tracking-[0.4em]">Result Output</span>
+                                    <div className="flex items-center gap-5 mb-10">
+                                        <div className="w-2 h-10 bg-emerald-500 rounded-full shadow-[0_0_20px_#10a37f]"></div>
+                                        <span className="text-[12px] font-black text-emerald-500 uppercase tracking-[0.5em]">Result Output</span>
                                     </div>
                                 )}
-                                <div className="prose prose-invert max-w-none whitespace-pre-wrap leading-[1.8] text-[17px] font-medium tracking-tight">
-                                    {m.content || (isLoading && m.role !== 'user' ? "Compiling response..." : "")}
+                                <div className="prose prose-invert max-w-none whitespace-pre-wrap leading-[1.9] text-[18px] font-medium tracking-tight opacity-95">
+                                    {m.content || (isLoading && m.role !== 'user' ? "Forging tokens..." : "")}
                                 </div>
                             </div>
                         </div>
                     ))
                 )}
                 {error && (
-                    <div className="max-w-4xl mx-auto p-10 bg-red-950/10 border border-red-500/10 rounded-[2.5rem] flex flex-col items-center gap-6 text-center animate-shake">
-                        <AlertCircle className="w-10 h-10 text-red-500 opacity-50" />
+                    <div className="max-w-4xl mx-auto p-12 bg-red-950/10 border border-red-500/20 rounded-[3rem] flex flex-col items-center gap-8 text-center">
+                        <AlertCircle className="w-12 h-12 text-red-500 opacity-60" />
                         <div>
-                            <p className="text-red-500 font-black uppercase text-[11px] tracking-[0.3em] mb-3">Sync Failure Detected</p>
-                            <p className="text-red-300/60 text-sm font-medium leading-relaxed max-w-lg">{error}</p>
+                            <p className="text-red-500 font-black uppercase text-[12px] tracking-[0.4em] mb-4">Token Forge Interrupted</p>
+                            <p className="text-red-300/60 text-base font-medium leading-relaxed max-w-xl">{error}</p>
                         </div>
-                        <div className="flex gap-4">
-                            <button onClick={() => window.location.reload()} className="px-8 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 text-[10px] font-black uppercase tracking-widest border border-red-500/20 rounded-full transition-all">Reload</button>
-                            <button onClick={toggleDemo} className="px-8 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 text-[10px] font-black uppercase tracking-widest border border-emerald-500/20 rounded-full transition-all">Enable Demo Mode</button>
+                        <div className="flex gap-6">
+                            <button onClick={() => window.location.reload()} className="px-10 py-3 bg-red-500/10 hover:bg-red-500/20 text-red-500 text-[11px] font-black uppercase tracking-widest border border-red-500/20 rounded-full transition-all">Reload</button>
+                            <button onClick={toggleDemo} className="px-10 py-3 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 text-[11px] font-black uppercase tracking-widest border border-emerald-500/20 rounded-full transition-all">Demo Output</button>
                         </div>
                     </div>
                 )}
             </div>
 
             {/* Input Overlay */}
-            <div className="p-8 pb-16 bg-gradient-to-t from-black via-black/90 to-transparent">
+            <div className="p-10 pb-20 bg-gradient-to-t from-black via-black/90 to-transparent">
                 <form onSubmit={handleSubmit} className="max-w-4xl mx-auto relative group">
-                    <div className="absolute -inset-0.5 bg-emerald-500/10 rounded-[3rem] blur-2xl opacity-0 group-focus-within:opacity-100 transition-opacity"></div>
-                    <div className="relative bg-[#080808] border border-zinc-900 rounded-[3rem] shadow-3xl p-4 flex items-center gap-6 focus-within:border-zinc-800 transition-all">
+                    <div className="absolute -inset-1 bg-emerald-500/20 rounded-[3.5rem] blur-3xl opacity-0 group-focus-within:opacity-100 transition-opacity"></div>
+                    <div className="relative bg-[#050505] border border-zinc-900 rounded-[3.5rem] shadow-3xl p-5 flex items-center gap-8 focus-within:border-zinc-800 transition-all">
                         <textarea
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
                             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmit(e); } }}
-                            placeholder="INITIALIZE SEARCH..."
-                            className="flex-1 bg-transparent border-none focus:ring-0 resize-none p-5 text-zinc-100 placeholder-zinc-800 font-black uppercase tracking-[0.2em] text-lg uppercase"
+                            placeholder="INPUT QUERY..."
+                            className="flex-1 bg-transparent border-none focus:ring-0 resize-none p-6 text-zinc-100 placeholder-zinc-900 font-black uppercase tracking-[0.3em] text-xl"
                             rows={1}
                         />
-                        <button type="submit" disabled={!input.trim() || isLoading} className="w-20 h-20 bg-emerald-500 text-black rounded-full flex items-center justify-center hover:bg-emerald-400 transition-all disabled:opacity-5 active:scale-95 shadow-2xl">
-                            <Send className={cn("w-7 h-7", isLoading && "animate-pulse")} />
+                        <button type="submit" disabled={!input.trim() || isLoading} className="w-24 h-24 bg-white text-black rounded-full flex items-center justify-center hover:bg-zinc-200 transition-all disabled:opacity-5 active:scale-95 shadow-3xl">
+                            <Send className={cn("w-8 h-8", isLoading && "animate-pulse")} />
                         </button>
                     </div>
                 </form>
